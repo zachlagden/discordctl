@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import discord
+
 from collections.abc import Callable
 from typing import Any
 
@@ -70,9 +72,10 @@ async def resolve_member(guild: Any, args: dict[str, Any], key: str = "user_id")
         uid = int(args[key])
         member = guild.get_member(uid)
         if member is None:
-            member = await guild.fetch_member(uid)
-        if member is None:
-            raise HandlerError(f"member {uid} not found", code="not_found")
+            try:
+                member = await guild.fetch_member(uid)
+            except discord.NotFound:
+                raise HandlerError(f"member {uid} not found", code="not_found")
         return member
     name = args.get("user_name")
     if name is not None:

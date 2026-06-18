@@ -68,3 +68,17 @@ async def test_resolve_member_by_id_uses_cache_then_fetch():
                             fetch_member=AsyncMock())
     assert await resolve_member(guild, {"user_id": 100}) is member
     guild.fetch_member.assert_not_called()
+
+
+async def test_resolve_member_fetch_miss_raises_not_found():
+    from types import SimpleNamespace
+    import discord
+    from claude_control.ops.lookup import resolve_member
+    from claude_control.ops.registry import HandlerError
+    resp = SimpleNamespace(status=404, reason="Not Found", headers={})
+    async def boom(uid):
+        raise discord.NotFound(resp, "Unknown Member")
+    guild = SimpleNamespace(get_member=lambda uid: None, fetch_member=boom)
+    with pytest.raises(HandlerError) as ei:
+        await resolve_member(guild, {"user_id": 999})
+    assert ei.value.code == "not_found"
