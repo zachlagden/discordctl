@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+
 import discord
 
 from discordctl.ops import serialize
@@ -11,6 +13,29 @@ def _colour(value):
     if isinstance(value, int):
         return discord.Colour(value)
     return discord.Colour(int(str(value).lstrip("#"), 16))
+
+
+def _role_field_kwargs(args):
+    kwargs = {}
+    if args.get("colour") is not None:
+        kwargs["colour"] = _colour(args["colour"])
+    if args.get("permissions") is not None:
+        kwargs["permissions"] = discord.Permissions(int(args["permissions"]))
+    for field in ("hoist", "mentionable"):
+        if args.get(field) is not None:
+            kwargs[field] = bool(args[field])
+    if args.get("icon") is not None:
+        kwargs["display_icon"] = base64.b64decode(args["icon"])
+    elif args.get("unicode_emoji") is not None:
+        kwargs["display_icon"] = str(args["unicode_emoji"])
+    colors = args.get("colors")
+    if colors is not None:
+        kwargs["colour"] = _colour(colors["primary"])
+        if colors.get("secondary") is not None:
+            kwargs["secondary_colour"] = _colour(colors["secondary"])
+        if colors.get("tertiary") is not None:
+            kwargs["tertiary_colour"] = _colour(colors["tertiary"])
+    return kwargs
 
 
 @op("role.list")
@@ -53,13 +78,7 @@ async def create(ctx, args):
     if ctx.dry_run:
         return plan("role.create", name=name)
     kwargs = {"name": name, "reason": args.get("reason")}
-    if args.get("colour") is not None:
-        kwargs["colour"] = _colour(args["colour"])
-    if args.get("permissions") is not None:
-        kwargs["permissions"] = discord.Permissions(int(args["permissions"]))
-    for field in ("hoist", "mentionable"):
-        if args.get(field) is not None:
-            kwargs[field] = bool(args[field])
+    kwargs.update(_role_field_kwargs(args))
     role = await guild.create_role(**kwargs)
     return serialize.role_dict(role)
 
@@ -69,11 +88,9 @@ async def edit(ctx, args):
     guild = resolve_guild(ctx, args)
     role = resolve_role(guild, args)
     fields = {}
-    for field in ("name", "hoist", "mentionable"):
-        if field in args:
-            fields[field] = args[field]
-    if args.get("colour") is not None:
-        fields["colour"] = _colour(args["colour"])
+    if "name" in args:
+        fields["name"] = args["name"]
+    fields.update(_role_field_kwargs(args))
     if ctx.dry_run:
         return plan("role.edit", role_id=str(role.id), fields=list(fields))
     await role.edit(reason=args.get("reason"), **fields)

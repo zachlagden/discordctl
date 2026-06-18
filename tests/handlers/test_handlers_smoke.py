@@ -72,6 +72,10 @@ EXPECTED_MUTATING = {
     "automod.delete",
     "emoji.create",
     "emoji.delete",
+    "emoji.edit",
+    "emoji.app_create",
+    "emoji.app_edit",
+    "emoji.app_delete",
     "sticker.create",
     "sticker.edit",
     "sticker.delete",
@@ -143,6 +147,9 @@ EXPECTED_READ = {
     "automod.list",
     "automod.info",
     "emoji.list",
+    "emoji.info",
+    "emoji.app_list",
+    "emoji.app_info",
     "sticker.list",
     "sticker.info",
     "sticker.get",
@@ -171,7 +178,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 162
+    assert len(REGISTRY.ops()) == 169
 
 
 def test_mutating_flags_match_plan():
