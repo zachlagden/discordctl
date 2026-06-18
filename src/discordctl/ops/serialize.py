@@ -198,6 +198,44 @@ def scheduled_event_dict(e: Any) -> dict[str, Any]:
     }
 
 
+def automod_rule_dict(r: Any) -> dict[str, Any]:
+    event_type = getattr(r, "event_type", None)
+    trigger = getattr(r, "trigger", None)
+    trigger_type = getattr(trigger, "type", None) if trigger is not None else None
+    trigger_metadata: dict[str, Any] = {}
+    if trigger is not None and hasattr(trigger, "to_metadata_dict"):
+        try:
+            trigger_metadata = trigger.to_metadata_dict()
+        except Exception:
+            trigger_metadata = {}
+    actions = []
+    for action in getattr(r, "actions", None) or []:
+        if hasattr(action, "to_dict"):
+            try:
+                actions.append(action.to_dict())
+                continue
+            except Exception:
+                pass
+        actions.append({"type": str(getattr(getattr(action, "type", None), "name", None))})
+    return {
+        "id": _id(getattr(r, "id", None)),
+        "guild_id": _id(getattr(getattr(r, "guild", None), "id", None)),
+        "name": getattr(r, "name", None),
+        "creator_id": _id(getattr(r, "creator_id", None)),
+        "event_type": str(getattr(event_type, "name", event_type))
+        if event_type is not None
+        else None,
+        "trigger_type": str(getattr(trigger_type, "name", trigger_type))
+        if trigger_type is not None
+        else None,
+        "trigger_metadata": trigger_metadata,
+        "actions": actions,
+        "enabled": getattr(r, "enabled", None),
+        "exempt_roles": [_id(i) for i in getattr(r, "exempt_role_ids", None) or []],
+        "exempt_channels": [_id(i) for i in getattr(r, "exempt_channel_ids", None) or []],
+    }
+
+
 def guild_dict(guild: Any) -> dict[str, Any]:
     return {
         "id": _id(guild.id),

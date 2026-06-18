@@ -64,6 +64,9 @@ EXPECTED_MUTATING = {
     "event.create",
     "event.edit",
     "event.delete",
+    "automod.create",
+    "automod.edit",
+    "automod.delete",
     "emoji.create",
     "emoji.delete",
     "invite.create",
@@ -113,6 +116,8 @@ EXPECTED_READ = {
     "event.list",
     "event.info",
     "event.users",
+    "automod.list",
+    "automod.info",
     "emoji.list",
     "invite.list",
     "webhook.list",
@@ -121,7 +126,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 112
+    assert len(REGISTRY.ops()) == 117
 
 
 def test_mutating_flags_match_plan():
