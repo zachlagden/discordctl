@@ -37,6 +37,8 @@ EXPECTED_MUTATING = {
     "bot.leave_guild",
     "message.send",
     "message.edit",
+    "user.dm_send",
+    "poll.end",
     "message.delete",
     "message.purge",
     "message.pin",
@@ -78,6 +80,7 @@ EXPECTED_READ = {
     "member.info",
     "message.history",
     "message.search",
+    "poll.voters",
     "permissions.channel_overwrites",
     "permissions.resolve_member",
     "permissions.resolve_role",
@@ -93,7 +96,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 84
+    assert len(REGISTRY.ops()) == 87
 
 
 def test_mutating_flags_match_plan():

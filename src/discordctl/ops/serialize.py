@@ -67,7 +67,48 @@ def category_dict(category: Any) -> dict[str, Any]:
     }
 
 
+def embed_dict(embed: Any) -> dict[str, Any]:
+    if hasattr(embed, "to_dict"):
+        return embed.to_dict()
+    return {
+        "title": getattr(embed, "title", None),
+        "description": getattr(embed, "description", None),
+    }
+
+
+def attachment_dict(attachment: Any) -> dict[str, Any]:
+    return {
+        "id": _id(attachment.id),
+        "filename": getattr(attachment, "filename", None),
+        "url": getattr(attachment, "url", None),
+        "size": getattr(attachment, "size", None),
+    }
+
+
+def poll_dict(poll: Any) -> dict[str, Any]:
+    question = getattr(poll, "question", None)
+    answers = []
+    for answer in getattr(poll, "answers", []):
+        answers.append(
+            {
+                "id": getattr(answer, "id", None),
+                "text": getattr(answer, "text", None),
+                "vote_count": getattr(answer, "vote_count", None),
+            }
+        )
+    return {
+        "question": getattr(question, "text", question),
+        "multiple": getattr(poll, "multiple", None),
+        "answers": answers,
+    }
+
+
 def message_dict(message: Any) -> dict[str, Any]:
+    embeds = getattr(message, "embeds", None) or []
+    attachments = getattr(message, "attachments", None) or []
+    components = getattr(message, "components", None)
+    flags = getattr(message, "flags", None)
+    poll = getattr(message, "poll", None)
     return {
         "id": _id(message.id),
         "channel_id": _id(message.channel.id),
@@ -76,6 +117,11 @@ def message_dict(message: Any) -> dict[str, Any]:
         "content": message.content,
         "pinned": getattr(message, "pinned", None),
         "created_at": str(message.created_at) if getattr(message, "created_at", None) else None,
+        "embeds": [embed_dict(e) for e in embeds],
+        "attachments": [attachment_dict(a) for a in attachments],
+        "components": [c.to_dict() for c in components] if components else [],
+        "poll": poll_dict(poll) if poll is not None else None,
+        "flags": flags.value if flags is not None else None,
     }
 
 

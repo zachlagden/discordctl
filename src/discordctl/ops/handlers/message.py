@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from discordctl.ops import serialize
 from discordctl.ops.lookup import resolve_channel, resolve_guild
+from discordctl.ops.message_build import build_message_kwargs, perform_edit, perform_send
 from discordctl.ops.registry import HandlerError, op, plan
 
 
@@ -37,10 +38,16 @@ async def search(ctx, args):
 async def send(ctx, args):
     guild = resolve_guild(ctx, args)
     channel = resolve_channel(guild, args)
-    content = args["content"]
+    kwargs = build_message_kwargs(args)
     if ctx.dry_run:
-        return plan("message.send", channel_id=str(channel.id), content=content)
-    message = await channel.send(content=content)
+        return plan(
+            "message.send",
+            channel_id=str(channel.id),
+            has_embeds=bool(kwargs.get("embeds")),
+            has_components=bool(kwargs.get("components")),
+            has_files=bool(kwargs.get("files")),
+        )
+    message = await perform_send(ctx, channel, kwargs)
     return serialize.message_dict(message)
 
 
@@ -48,10 +55,17 @@ async def send(ctx, args):
 async def edit(ctx, args):
     guild = resolve_guild(ctx, args)
     channel = resolve_channel(guild, args)
+    kwargs = build_message_kwargs(args, edit=True)
     if ctx.dry_run:
-        return plan("message.edit", channel_id=str(channel.id), message_id=str(args["message_id"]))
+        return plan(
+            "message.edit",
+            channel_id=str(channel.id),
+            message_id=str(args["message_id"]),
+            has_embeds=bool(kwargs.get("embeds")),
+            has_components=bool(kwargs.get("components")),
+        )
     message = await _fetch_message(channel, args["message_id"])
-    await message.edit(content=args["content"])
+    message = await perform_edit(ctx, message, kwargs)
     return serialize.message_dict(message)
 
 
@@ -113,3 +127,33 @@ async def react(ctx, args):
     message = await _fetch_message(channel, args["message_id"])
     await message.add_reaction(emoji)
     return {"reacted": str(args["message_id"]), "emoji": emoji}
+
+
+@op("poll.end", mutating=True)
+async def poll_end(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    if ctx.dry_run:
+        return plan("poll.end", channel_id=str(channel.id), message_id=str(args["message_id"]))
+    message = await _fetch_message(channel, args["message_id"])
+    if getattr(message, "poll", None) is None:
+        raise HandlerError("message has no poll", code="bad_args")
+    ended = await message.end_poll()
+    return serialize.message_dict(ended)
+
+
+@op("poll.voters")
+async def poll_voters(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    message = await _fetch_message(channel, args["message_id"])
+    poll = getattr(message, "poll", None)
+    if poll is None:
+        raise HandlerError("message has no poll", code="bad_args")
+    answer = poll.get_answer(int(args["answer_id"]))
+    if answer is None:
+        raise HandlerError(f"answer {args['answer_id']} not found", code="not_found")
+    out = []
+    async for user in answer.voters():
+        out.append(serialize.user_dict(user))
+    return out
