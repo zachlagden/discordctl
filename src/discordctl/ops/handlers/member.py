@@ -153,6 +153,16 @@ async def roles_set(ctx, args):
     return {"member": str(member.id), "roles": [str(r.id) for r in roles]}
 
 
+@op("member.self_edit", mutating=True)
+async def self_edit(ctx, args):
+    guild = resolve_guild(ctx, args)
+    new_nick = args.get("nick")
+    if ctx.dry_run:
+        return plan("member.self_edit", guild_id=str(guild.id), nick=new_nick)
+    await guild.me.edit(nick=new_nick, reason=args.get("reason"))
+    return serialize.member_dict(guild.me)
+
+
 @op("member.voice_move", mutating=True)
 async def voice_move(ctx, args):
     guild = resolve_guild(ctx, args)

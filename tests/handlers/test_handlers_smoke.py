@@ -30,6 +30,11 @@ EXPECTED_MUTATING = {
     "member.roles_set",
     "member.voice_move",
     "member.voice_disconnect",
+    "member.self_edit",
+    "bot.presence_set",
+    "bot.presence_clear",
+    "bot.profile_edit",
+    "bot.leave_guild",
     "message.send",
     "message.edit",
     "message.delete",
@@ -53,6 +58,10 @@ EXPECTED_READ = {
     "bot.version",
     "bot.guilds",
     "bot.stats",
+    "bot.presence_get",
+    "bot.gateway",
+    "user.me",
+    "user.get",
     "guild.info",
     "guild.snapshot",
     "guild.diff",
@@ -84,7 +93,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 75
+    assert len(REGISTRY.ops()) == 84
 
 
 def test_mutating_flags_match_plan():

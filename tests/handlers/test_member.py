@@ -64,3 +64,37 @@ async def test_ban_refuses_owner():
     ctx = ctx_for(guild, dry_run=False)
     with pytest.raises(HandlerError):
         await member_ops.ban(ctx, {"user_id": 100})
+
+
+def make_guild_with_me():
+    me = SimpleNamespace(
+        id=42,
+        name="ctl",
+        display_name="ctl",
+        nick=None,
+        bot=True,
+        roles=[],
+        joined_at=None,
+        edit=AsyncMock(),
+    )
+    guild = SimpleNamespace(id=1, owner_id=1, me=me, members=[me])
+    return guild, me
+
+
+async def test_self_edit_dry_run_does_not_call():
+    guild, me = make_guild_with_me()
+    ctx = ctx_for(guild, dry_run=True)
+    result = await member_ops.self_edit(ctx, {"nick": "Botty"})
+    assert result["planned"] is True
+    me.edit.assert_not_called()
+
+
+async def test_self_edit_live_calls_me_edit():
+    guild, me = make_guild_with_me()
+    ctx = ctx_for(guild, dry_run=False)
+    result = await member_ops.self_edit(ctx, {"nick": "Botty", "reason": "rename"})
+    me.edit.assert_awaited_once()
+    kwargs = me.edit.await_args.kwargs
+    assert kwargs["nick"] == "Botty"
+    assert kwargs["reason"] == "rename"
+    assert result["id"] == "42"

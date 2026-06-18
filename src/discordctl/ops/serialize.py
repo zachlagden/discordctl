@@ -22,6 +22,17 @@ def role_dict(role: Any) -> dict[str, Any]:
     }
 
 
+def user_dict(user: Any) -> dict[str, Any]:
+    avatar = getattr(user, "avatar", None)
+    return {
+        "id": _id(getattr(user, "id", None)),
+        "name": getattr(user, "name", None),
+        "global_name": getattr(user, "global_name", None),
+        "bot": getattr(user, "bot", False),
+        "avatar": str(avatar) if avatar is not None else None,
+    }
+
+
 def member_dict(member: Any) -> dict[str, Any]:
     return {
         "id": _id(member.id),
