@@ -1,0 +1,8 @@
+services:
+  claude-control:
+    build: .
+    env_file: .env
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./audit.jsonl:/app/audit.jsonl
