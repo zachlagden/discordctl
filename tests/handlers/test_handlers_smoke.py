@@ -79,6 +79,10 @@ EXPECTED_MUTATING = {
     "invite.delete",
     "webhook.create",
     "webhook.delete",
+    "webhook.edit",
+    "webhook.execute",
+    "webhook.message_edit",
+    "webhook.message_delete",
 }
 
 EXPECTED_READ = {
@@ -132,12 +136,15 @@ EXPECTED_READ = {
     "stage.info",
     "invite.list",
     "webhook.list",
+    "webhook.info",
+    "webhook.guild_list",
+    "webhook.message_get",
 }
 
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 128
+    assert len(REGISTRY.ops()) == 135
 
 
 def test_mutating_flags_match_plan():
