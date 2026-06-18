@@ -26,7 +26,7 @@
 persistent [discord.py](https://discordpy.readthedocs.io/) daemon holds the gateway connection and
 exposes a **localhost-only HTTP command bus**; the `dctl` CLI drives that bus over the shell — so you
 (or an automation, or an AI coding agent) can ban and edit members, manage roles, channels, categories,
-permissions, messages, threads, emojis, invites, and webhooks. **75 operations** in all, covering the
+permissions, messages, threads, emojis, invites, and webhooks. **179 operations** in all, covering the
 whole management surface.
 
 It was built to let an AI agent administer a server safely, so safety is the headline: **every mutating
@@ -39,7 +39,7 @@ allowlist and a global kill switch, and every call is appended to an audit log.
 
 | Feature | Description |
 | --- | --- |
-| **75 operations** | Guild, channel, category, role, member, message, permissions, thread, emoji, invite, and webhook management — driven as `dctl op <name>`. |
+| **179 operations** | Guild, channel, category, role, member, message, permissions, thread, emoji, invite, and webhook management — driven as `dctl op <name>`. |
 | **Dry-run by default** | Every mutation previews what it *would* do and changes nothing until you pass `--confirm`. The client cannot bypass this. |
 | **Guarded & auditable** | Guild allowlist, `WRITE_ENABLED` kill switch, owner-ban refusal, `--yes-really` for destructive ops, and an append-only JSONL audit log of every call. |
 | **Declarative state** | `guild.snapshot` → `guild.diff` → `guild.apply`: capture the server to JSON, edit it, apply the difference. |
@@ -131,7 +131,7 @@ src/discordctl/
 │   ├── lookup.py      # entity resolution + guild allowlist
 │   ├── serialize.py   # discord objects -> JSON
 │   ├── audit.py       # append-only audit writer
-│   └── handlers/      # one module per domain (75 ops)
+│   └── handlers/      # one module per domain (179 ops)
 └── cli/dctl.py        # the CLI
 docs/                  # SETUP.md, SMOKE.md, design spec & plan
 ```
