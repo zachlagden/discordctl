@@ -22,3 +22,11 @@ async def test_record_appends_jsonl(tmp_path):
     assert first["op"] == "member.ban"
     assert first["ok"] is True
     assert "ts" in first
+
+
+async def test_record_creates_missing_parent_dir(tmp_path):
+    path = tmp_path / "nested" / "deeper" / "audit.jsonl"
+    writer = AuditWriter(str(path))
+    await writer.record(op="x", ok=True)
+    assert path.exists()
+    assert path.read_text().strip()
