@@ -7,11 +7,11 @@ from claude_control.ops.lookup import resolve_channel, resolve_guild, resolve_me
 from claude_control.ops.registry import HandlerError, op, plan
 
 
-def _resolve_target(guild, channel, args):
+async def _resolve_target(guild, args):
     if args.get("role_id") is not None or args.get("role_name") is not None:
         return resolve_role(guild, args)
     if args.get("user_id") is not None:
-        return guild.get_member(int(args["user_id"]))
+        return await resolve_member(guild, args)
     raise HandlerError("role_id or user_id required", code="bad_args")
 
 
@@ -21,7 +21,10 @@ def _build_overwrite(allow, deny):
         mapping[name] = True
     for name in deny or []:
         mapping[name] = False
-    return discord.PermissionOverwrite(**mapping)
+    try:
+        return discord.PermissionOverwrite(**mapping)
+    except (ValueError, TypeError) as exc:
+        raise HandlerError(f"invalid permission name: {exc}", code="bad_args")
 
 
 @op("permissions.channel_overwrites")
@@ -53,7 +56,7 @@ async def resolve_role_perms(ctx, args):
 async def channel_overwrite_set(ctx, args):
     guild = resolve_guild(ctx, args)
     channel = resolve_channel(guild, args)
-    target = _resolve_target(guild, channel, args)
+    target = await _resolve_target(guild, args)
     overwrite = _build_overwrite(args.get("allow"), args.get("deny"))
     if ctx.dry_run:
         return plan("permissions.channel_overwrite_set", channel_id=str(channel.id),
@@ -66,7 +69,7 @@ async def channel_overwrite_set(ctx, args):
 async def channel_overwrite_clear(ctx, args):
     guild = resolve_guild(ctx, args)
     channel = resolve_channel(guild, args)
-    target = _resolve_target(guild, channel, args)
+    target = await _resolve_target(guild, args)
     if ctx.dry_run:
         return plan("permissions.channel_overwrite_clear", channel_id=str(channel.id),
                     target_id=str(target.id))

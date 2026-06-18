@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import pytest
+
 from claude_control.ops.handlers import permissions as perm_ops
 from claude_control.ops.registry import BusContext
 
@@ -36,3 +38,31 @@ async def test_overwrite_clear_live():
     await perm_ops.channel_overwrite_clear(
         ctx_for(guild, False), {"channel_id": 200, "role_id": 10})
     channel.set_permissions.assert_awaited_once()
+
+
+async def test_overwrite_set_uncached_member_raises_not_found():
+    from unittest.mock import AsyncMock
+    import discord
+    from claude_control.ops.registry import HandlerError
+    channel = SimpleNamespace(id=200, name="general", type=SimpleNamespace(name="text"),
+                              overwrites={}, set_permissions=AsyncMock())
+    resp = SimpleNamespace(status=404, reason="Not Found", headers={})
+    async def boom(uid):
+        raise discord.NotFound(resp, "Unknown Member")
+    guild = SimpleNamespace(id=1, roles=[], channels=[channel],
+                            get_member=lambda uid: None, fetch_member=boom,
+                            get_channel=lambda cid: channel if cid == 200 else None)
+    with pytest.raises(HandlerError) as ei:
+        await perm_ops.channel_overwrite_set(
+            ctx_for(guild, False), {"channel_id": 200, "user_id": 999, "allow": [], "deny": []})
+    assert ei.value.code == "not_found"
+
+
+async def test_overwrite_set_invalid_permission_raises_bad_args():
+    from claude_control.ops.registry import HandlerError
+    guild, channel, role = make_guild()
+    with pytest.raises(HandlerError) as ei:
+        await perm_ops.channel_overwrite_set(
+            ctx_for(guild, False),
+            {"channel_id": 200, "role_id": 10, "allow": ["not_a_real_perm"], "deny": []})
+    assert ei.value.code == "bad_args"
