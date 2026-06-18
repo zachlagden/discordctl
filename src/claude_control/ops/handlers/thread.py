@@ -38,7 +38,9 @@ async def info(ctx, args):
 async def history(ctx, args):
     guild = resolve_guild(ctx, args)
     tid = int(args["thread_id"])
-    thread = guild.get_thread(tid) if hasattr(guild, "get_thread") else guild.get_channel(tid)
+    thread = guild.get_thread(tid) if hasattr(guild, "get_thread") else None
+    if thread is None:
+        thread = guild.get_channel(tid)
     if thread is None:
         raise HandlerError(f"thread {tid} not found", code="not_found")
     limit = int(args.get("limit", 50))
