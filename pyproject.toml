@@ -1,6 +1,6 @@
 [project]
 name = "discordctl"
-version = "0.1.0"
+version = "0.2.0"
 description = "Control a Discord server from the command line — a localhost command bus and dctl CLI for full bot-driven server management."
 readme = "README.md"
 authors = [
