@@ -84,6 +84,11 @@ EXPECTED_MUTATING = {
     "stage.delete",
     "invite.create",
     "invite.delete",
+    "voice.state_self_set",
+    "voice.state_set",
+    "soundboard.create",
+    "soundboard.edit",
+    "soundboard.delete",
     "webhook.create",
     "webhook.delete",
     "webhook.edit",
@@ -156,6 +161,11 @@ EXPECTED_READ = {
     "sticker.packs",
     "stage.info",
     "invite.list",
+    "invite.info",
+    "invite.list_guild",
+    "voice.state_get",
+    "soundboard.list",
+    "soundboard.info",
     "webhook.list",
     "webhook.info",
     "webhook.guild_list",
@@ -178,7 +188,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 169
+    assert len(REGISTRY.ops()) == 179
 
 
 def test_mutating_flags_match_plan():

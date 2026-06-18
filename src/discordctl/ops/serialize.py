@@ -168,13 +168,69 @@ def stage_dict(i: Any) -> dict[str, Any]:
 
 
 def invite_dict(invite: Any) -> dict[str, Any]:
+    channel = getattr(invite, "channel", None)
+    target_type = getattr(invite, "target_type", None)
+    target_user = getattr(invite, "target_user", None)
+    target_application = getattr(invite, "target_application", None)
+    inviter = getattr(invite, "inviter", None)
+    expires_at = getattr(invite, "expires_at", None)
+    created_at = getattr(invite, "created_at", None)
     return {
         "code": invite.code,
         "url": invite.url,
         "uses": getattr(invite, "uses", None),
         "max_uses": getattr(invite, "max_uses", None),
         "max_age": getattr(invite, "max_age", None),
-        "channel_id": _id(getattr(invite.channel, "id", None)) if invite.channel else None,
+        "temporary": getattr(invite, "temporary", None),
+        "revoked": getattr(invite, "revoked", None),
+        "channel_id": _id(getattr(channel, "id", None)) if channel else None,
+        "guild_id": _id(getattr(getattr(invite, "guild", None), "id", None)),
+        "approximate_member_count": getattr(invite, "approximate_member_count", None),
+        "approximate_presence_count": getattr(invite, "approximate_presence_count", None),
+        "expires_at": expires_at.isoformat() if expires_at is not None else None,
+        "created_at": created_at.isoformat() if created_at is not None else None,
+        "inviter_id": _id(getattr(inviter, "id", None)),
+        "target_type": str(getattr(target_type, "name", target_type))
+        if target_type is not None
+        else None,
+        "target_user_id": _id(getattr(target_user, "id", None)),
+        "target_application_id": _id(getattr(target_application, "id", None)),
+    }
+
+
+def voice_state_dict(state: Any) -> dict[str, Any]:
+    if state is None:
+        return {"channel_id": None, "connected": False}
+    channel = getattr(state, "channel", None)
+    requested = getattr(state, "requested_to_speak_at", None)
+    return {
+        "connected": channel is not None,
+        "channel_id": _id(getattr(channel, "id", None)),
+        "mute": getattr(state, "mute", None),
+        "deaf": getattr(state, "deaf", None),
+        "self_mute": getattr(state, "self_mute", None),
+        "self_deaf": getattr(state, "self_deaf", None),
+        "self_stream": getattr(state, "self_stream", None),
+        "self_video": getattr(state, "self_video", None),
+        "suppress": getattr(state, "suppress", None),
+        "afk": getattr(state, "afk", None),
+        "requested_to_speak_at": requested.isoformat() if requested is not None else None,
+        "session_id": getattr(state, "session_id", None),
+    }
+
+
+def soundboard_sound_dict(s: Any) -> dict[str, Any]:
+    emoji = getattr(s, "emoji", None)
+    user = getattr(s, "user", None)
+    return {
+        "id": _id(getattr(s, "id", None)),
+        "name": getattr(s, "name", None),
+        "volume": getattr(s, "volume", None),
+        "emoji": str(emoji) if emoji is not None else None,
+        "available": getattr(s, "available", None),
+        "guild_id": _id(getattr(getattr(s, "guild", None), "id", None)),
+        "user_id": _id(getattr(user, "id", None)),
+        "url": getattr(s, "url", None),
     }
 
 
