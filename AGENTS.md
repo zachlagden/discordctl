@@ -13,8 +13,10 @@ and how to walk the user through first-time setup.
 `discordctl` is a persistent discord.py daemon that holds a gateway connection and exposes a
 **localhost-only HTTP command bus**. You drive it through the **`dctl` CLI** over the shell. One
 command per action; JSON in, JSON out. You can do essentially anything a server admin can:
-manage the guild, channels, categories, roles, members (ban/kick/timeout/roles/voice), messages,
-permission overwrites, threads, emojis, invites, and webhooks — **75 operations** total.
+manage the guild, channels, categories, roles, members (ban/kick/timeout/roles/voice), rich messages
+(embeds, components, files, polls), bot presence, threads, scheduled events, automod, stickers, stage
+instances, permission overwrites, emojis, invites, webhooks, voice state, soundboard, and templates —
+**179 operations** total.
 
 You are acting as a server administrator. Treat every mutation as consequential.
 
@@ -51,7 +53,7 @@ default `./audit.jsonl`).
 
 ```bash
 uv run dctl health                 # is the bus up?  -> {"ok":true,"data":{"status":"ready"}}
-uv run dctl ops                    # list all 75 ops and whether each mutates
+uv run dctl ops                    # list all 179 ops and whether each mutates
 uv run dctl describe <op>          # show one op's name + mutating flag
 uv run dctl op <name> [--arg k=v]... [--confirm] [--yes-really] [--json]
 ```
@@ -149,26 +151,57 @@ These apply to most ops, so they aren't repeated in every row below:
 
 ---
 
-## 6. Complete command reference (all 75 ops)
+## 6. Complete command reference (all 179 ops)
 
-`M` = mutating (dry-run-by-default, needs `--confirm`). `R` = read-only.
+`M` = mutating (dry-run-by-default, needs `--confirm`). `R` = read-only. `guild_id` is optional
+everywhere (defaults to `DEFAULT_GUILD_ID`) and `reason?` applies to most mutations — neither is
+repeated below. Ops added in v2 (beyond the original 75) are marked **[new]**.
 
-### bot — diagnostics (R)
-| Op | Args | Returns |
-|----|------|---------|
-| `bot.ping` | — | gateway latency (ms) |
-| `bot.version` | — | discordctl version |
-| `bot.guilds` | — | guilds the bot is in (id, name, member_count) |
-| `bot.stats` | — | guild count + op count |
+### bot — diagnostics & presence
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `bot.ping` | R | — | gateway latency (ms) |
+| `bot.version` | R | — | discordctl version |
+| `bot.guilds` | R | — | guilds the bot is in |
+| `bot.stats` | R | — | guild + op counts |
+| `bot.gateway` | R | — | gateway/session info **[new]** |
+| `bot.presence_set` | M | `type?`, `name?`, `status?`, `url?` | ephemeral, lost on restart **[new]** |
+| `bot.presence_clear` | M | — | clears activity **[new]** |
+| `bot.presence_get` | R | — | reads in-memory presence **[new]** |
+| `bot.profile_edit` | M | `username?`, `avatar_b64?` | edit the bot user **[new]** |
+| `bot.leave_guild` | M | `guild_id`, **`--yes-really`** | destructive **[new]** |
+
+See **Bot presence** below for the ephemeral-state caveat.
+
+### user
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `user.me` | R | — | the bot user |
+| `user.get` | R | `user_id` | any user by id |
+| `user.dm_send` | M | `user_id`, rich-message args | DM with full rich surface **[new]** |
 
 ### guild
 | Op | T | Args | Notes |
 |----|---|------|-------|
 | `guild.info` | R | — | name, owner, counts |
-| `guild.snapshot` | R | — | full declarative state (roles, categories, channels) as JSON |
-| `guild.diff` | R | `desired` | diff current vs a desired snapshot (`--arg desired=@snap.json`) |
-| `guild.audit_log` | R | `limit?` | recent Discord audit-log entries |
-| `guild.edit` | M | `name?`, `description?`, `reason?` | edit guild settings |
+| `guild.preview` | R | — | discovery preview **[new]** |
+| `guild.audit_log` | R | `limit?` | recent audit-log entries |
+| `guild.vanity_url` | R | — | vanity invite **[new]** |
+| `guild.voice_regions` | R | — | available regions **[new]** |
+| `guild.edit` | M | any of `name`/`description`/`icon`/`banner`/`splash`/`vanity_code`/`afk_channel`/`afk_timeout`/`system_channel`/`rules_channel`/`public_updates_channel`/`safety_alerts_channel`/`verification_level`/`default_message_notifications`/`explicit_content_filter`/`preferred_locale`/`premium_progress_bar_enabled`/`system_channel_flags` | full settings **[new]** |
+| `guild.prune_count` | R | `days?`, `role_ids?` | dry estimate **[new]** |
+| `guild.prune` | M | `days?`, `role_ids?`, `compute_prune_count?` | remove inactive members **[new]** |
+| `guild.onboarding_get` | R | — | **[new]** |
+| `guild.onboarding_edit` | M | `enabled?`, `mode?`, `default_channel_ids?` | **[new]** |
+| `guild.welcome_screen_get` | R | — | **[new]** |
+| `guild.welcome_screen_edit` | M | `description?`, `enabled?`, `welcome_channels?` | **[new]** |
+| `guild.widget_get` | R | — | **[new]** |
+| `guild.widget_edit` | M | `enabled?`, `channel_id?` | **[new]** |
+| `guild.integrations_list` | R | — | **[new]** |
+| `guild.integration_delete` | M | `integration_id` | **[new]** |
+| `guild.incident_actions_set` | M | `invites_disabled_until?` and/or `dms_disabled_until?` | one required **[new]** |
+| `guild.snapshot` | R | — | full declarative state as JSON (see §7) |
+| `guild.diff` | R | `desired` | diff current vs a desired snapshot |
 | `guild.apply` | M | `desired`, **`--yes-really` if it deletes** | apply a desired snapshot (see §7) |
 
 ### channel
@@ -176,12 +209,15 @@ These apply to most ops, so they aren't repeated in every row below:
 |----|---|------|-------|
 | `channel.list` | R | — | all channels |
 | `channel.info` | R | `channel_id\|channel_name` | |
-| `channel.create` | M | `name`, `type?`, `category_id?`, `topic?`, `nsfw?`, `reason?` | `type` ∈ text/voice/forum/stage/category (default text). `topic` rejected by voice/stage/category; `nsfw` rejected by category |
-| `channel.edit` | M | `channel_id\|channel_name`, any of `name`/`topic`/`nsfw`/`slowmode_delay`/`position`, `reason?` | only whitelisted fields are applied |
-| `channel.move` | M | `channel_id\|channel_name`, `position`, `reason?` | reorder |
-| `channel.clone` | M | `channel_id\|channel_name`, `name?`, `reason?` | duplicate |
-| `channel.sync` | M | `channel_id\|channel_name`, `reason?` | sync overwrites to parent category |
-| `channel.delete` | M | `channel_id\|channel_name`, `reason?` | |
+| `channel.create` | M | `name`, `type?`, `category_id?`, plus type-specific (`topic?`, `nsfw?`, `slowmode_delay?`, `bitrate?`, `user_limit?`, `rtc_region?`, `available_tags?`, `permission_overwrites?` …) | `type` ∈ text/voice/forum/stage/category |
+| `channel.edit` | M | `channel_id\|channel_name`, any of `name`/`topic`/`nsfw`/`slowmode_delay`/`position`/`bitrate`/`user_limit`/`rtc_region`/`video_quality_mode`/`available_tags`/`default_*`/`flags`/`category_id`/`permission_overwrites`/`sync_permissions` | expanded settings **[new]** |
+| `channel.move` | M | `channel_id\|channel_name`, `position` | reorder |
+| `channel.clone` | M | `channel_id\|channel_name`, `name?` | duplicate |
+| `channel.sync` | M | `channel_id\|channel_name` | sync overwrites to parent category |
+| `channel.follow` | M | `channel_id\|channel_name`, `target_channel_id` | crosspost an announcement channel **[new]** |
+| `channel.voice_status_set` | M | `channel_id\|channel_name`, `status?` | set voice channel status **[new]** |
+| `channel.typing` | M | `channel_id\|channel_name` | trigger typing indicator **[new]** |
+| `channel.delete` | M | `channel_id\|channel_name` | |
 
 ### category
 | Op | T | Args | Notes |
@@ -189,22 +225,23 @@ These apply to most ops, so they aren't repeated in every row below:
 | `category.list` | R | — | |
 | `category.info` | R | `category_id\|category_name` | |
 | `category.children` | R | `category_id\|category_name` | channels under it |
-| `category.create` | M | `name`, `reason?` | |
-| `category.edit` | M | `category_id\|category_name`, `name?`, `position?`, `reason?` | |
-| `category.move` | M | `category_id\|category_name`, `position`, `reason?` | |
-| `category.delete` | M | `category_id\|category_name`, `reason?` | |
+| `category.create` | M | `name` | |
+| `category.edit` | M | `category_id\|category_name`, `name?`, `position?` | |
+| `category.move` | M | `category_id\|category_name`, `position` | |
+| `category.delete` | M | `category_id\|category_name` | |
 
 ### role
 | Op | T | Args | Notes |
 |----|---|------|-------|
 | `role.list` | R | — | |
 | `role.info` | R | `role_id\|role_name` | |
-| `role.create` | M | `name`, `colour?`, `permissions?`, `hoist?`, `mentionable?`, `reason?` | `colour` = hex string `#5865F2` or integer; `permissions` = integer bitfield |
-| `role.edit` | M | `role_id\|role_name`, any of `name`/`hoist`/`mentionable`/`colour`, `reason?` | |
-| `role.move` | M | `role_id\|role_name`, `position`, `reason?` | reorder (affects hierarchy) |
-| `role.clone` | M | `role_id\|role_name`, `name?`, `reason?` | copy perms/colour/flags |
-| `role.permissions_set` | M | `role_id\|role_name`, `permissions`, `reason?` | replace the role's permission bitfield |
-| `role.delete` | M | `role_id\|role_name`, `reason?` | |
+| `role.member_counts` | R | — | members per role (cache-based) **[new]** |
+| `role.create` | M | `name`, `colour?`, `permissions?`, `hoist?`, `mentionable?`, `icon?`, `unicode_emoji?`, `colors?` | `colors` = gradient holographic colours **[new]**; `icon` = role icon |
+| `role.edit` | M | `role_id\|role_name`, any of `name`/`colour`/`permissions`/`hoist`/`mentionable`/`icon`/`unicode_emoji`/`colors` | gradient colours + icon **[new]** |
+| `role.move` | M | `role_id\|role_name`, `position` | reorder (affects hierarchy) |
+| `role.clone` | M | `role_id\|role_name`, `name?` | copy perms/colour/flags |
+| `role.permissions_set` | M | `role_id\|role_name`, `permissions` | replace permission bitfield |
+| `role.delete` | M | `role_id\|role_name` | |
 
 ### member — moderation
 | Op | T | Args | Notes |
@@ -212,30 +249,49 @@ These apply to most ops, so they aren't repeated in every row below:
 | `member.list` | R | `limit?` | cached members |
 | `member.search` | R | `query?`, `limit?` | match name/display name |
 | `member.info` | R | `user_id\|user_name` | includes presence `status`/`activity` |
-| `member.ban` | M | `user_id`, `delete_message_seconds?`, `reason?` | numeric `user_id` only; refuses owner |
-| `member.unban` | M | `user_id`, `reason?` | numeric `user_id` |
-| `member.kick` | M | `user_id\|user_name`, `reason?` | refuses owner |
-| `member.timeout` | M | `user_id\|user_name`, `seconds`, `reason?` | timed mute |
-| `member.untimeout` | M | `user_id\|user_name`, `reason?` | clear timeout |
-| `member.nick` | M | `user_id\|user_name`, `nick?`, `reason?` | omit `nick` to clear |
-| `member.roles_add` | M | `user_id\|user_name`, `role_ids`, `reason?` | `role_ids` = JSON array |
-| `member.roles_remove` | M | `user_id\|user_name`, `role_ids`, `reason?` | |
-| `member.roles_set` | M | `user_id\|user_name`, `role_ids`, `reason?` | replaces all roles |
-| `member.voice_move` | M | `user_id\|user_name`, `channel_id`, `reason?` | move between voice channels |
-| `member.voice_disconnect` | M | `user_id\|user_name`, `reason?` | kick from voice |
+| `member.ban` | M | `user_id`, `delete_message_seconds?` | numeric id; refuses owner |
+| `member.bans_list` | R | `limit?` | the ban list **[new]** |
+| `member.ban_info` | R | `user_id` | single ban entry **[new]** |
+| `member.bulk_ban` | M | `user_ids` (1..200) , `delete_message_seconds?` | **[new]** |
+| `member.unban` | M | `user_id` | numeric id |
+| `member.kick` | M | `user_id\|user_name` | refuses owner |
+| `member.timeout` | M | `user_id\|user_name`, `seconds` | timed mute |
+| `member.untimeout` | M | `user_id\|user_name` | clear timeout |
+| `member.nick` | M | `user_id\|user_name`, `nick?` | omit `nick` to clear |
+| `member.roles_add` | M | `user_id\|user_name`, `role_ids` | `role_ids` = JSON array |
+| `member.roles_remove` | M | `user_id\|user_name`, `role_ids` | |
+| `member.roles_set` | M | `user_id\|user_name`, `role_ids` | replaces all roles **[new]** |
+| `member.self_edit` | M | `nick?` | edit the bot's own member **[new]** |
+| `member.voice_move` | M | `user_id\|user_name`, `channel_id` | move between voice channels **[new]** |
+| `member.voice_disconnect` | M | `user_id\|user_name` | kick from voice **[new]** |
 
 ### message
 | Op | T | Args | Notes |
 |----|---|------|-------|
 | `message.history` | R | `channel_id\|channel_name`, `limit?` | recent messages |
 | `message.search` | R | `channel_id\|channel_name`, `query?`, `limit?` | substring match on content |
-| `message.send` | M | `channel_id\|channel_name`, `content` | |
-| `message.edit` | M | `channel_id\|channel_name`, `message_id`, `content` | |
+| `message.get` | R | `channel_id\|channel_name`, `message_id` | single message |
+| `message.send` | M | `channel_id\|channel_name`, rich-message args | embeds/components/files/poll/reply **[new]** |
+| `message.edit` | M | `channel_id\|channel_name`, `message_id`, any of `content`/`embeds`/`components`/`allowed_mentions`/`flags` | **[new]** |
 | `message.delete` | M | `channel_id\|channel_name`, `message_id` | |
-| `message.purge` | M | `channel_id\|channel_name`, `limit`, **`--yes-really` if `limit` > 100** | bulk delete |
-| `message.pin` | M | `channel_id\|channel_name`, `message_id`, `reason?` | |
-| `message.unpin` | M | `channel_id\|channel_name`, `message_id`, `reason?` | |
-| `message.react` | M | `channel_id\|channel_name`, `message_id`, `emoji` | unicode or `name:id` custom emoji |
+| `message.bulk_delete` | M | `channel_id\|channel_name`, `message_ids` (2..100) | **[new]** |
+| `message.purge` | M | `channel_id\|channel_name`, `limit`, **`--yes-really` if `limit` > 100** | bulk delete by count |
+| `message.crosspost` | M | `channel_id\|channel_name`, `message_id` | publish announcement **[new]** |
+| `message.pin` | M | `channel_id\|channel_name`, `message_id` | |
+| `message.unpin` | M | `channel_id\|channel_name`, `message_id` | |
+| `message.pins_list` | R | `channel_id\|channel_name` | **[new]** |
+| `message.react` | M | `channel_id\|channel_name`, `message_id`, `emoji` | unicode or `name:id` custom |
+| `message.reactions_list` | R | `channel_id\|channel_name`, `message_id`, `emoji`, `limit?` | who reacted **[new]** |
+| `message.reaction_remove` | M | `channel_id\|channel_name`, `message_id`, `emoji`, `user_id?` | **[new]** |
+| `message.reactions_clear` | M | `channel_id\|channel_name`, `message_id`, `emoji?` | clear one or all **[new]** |
+
+See **Rich messages** below for the full `send`/`edit` argument surface.
+
+### poll
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `poll.end` | M | `channel_id\|channel_name`, `message_id` | message must carry a poll **[new]** |
+| `poll.voters` | R | `channel_id\|channel_name`, `message_id`, `answer_id` | who voted for an answer **[new]** |
 
 ### permissions — channel overwrites
 | Op | T | Args | Notes |
@@ -243,38 +299,174 @@ These apply to most ops, so they aren't repeated in every row below:
 | `permissions.channel_overwrites` | R | `channel_id\|channel_name` | list all overwrites on a channel |
 | `permissions.resolve_member` | R | `channel_id\|channel_name`, `user_id\|user_name` | effective perms for a member |
 | `permissions.resolve_role` | R | `channel_id\|channel_name`, `role_id\|role_name` | effective perms for a role |
-| `permissions.channel_overwrite_set` | M | `channel_id\|channel_name`, target (`role_id\|role_name` **or** `user_id`), `allow?`, `deny?`, `reason?` | `allow`/`deny` = JSON arrays of permission names, e.g. `--arg allow=["send_messages","view_channel"]` |
-| `permissions.channel_overwrite_clear` | M | `channel_id\|channel_name`, target (`role_id\|role_name` **or** `user_id`), `reason?` | remove the overwrite |
+| `permissions.channel_overwrite_set` | M | `channel_id\|channel_name`, target (`role_id\|role_name` **or** `user_id`), `allow?`, `deny?` | `allow`/`deny` = JSON arrays of permission names |
+| `permissions.channel_overwrite_clear` | M | `channel_id\|channel_name`, target (`role_id\|role_name` **or** `user_id`) | remove the overwrite |
 
 ### thread
 | Op | T | Args | Notes |
 |----|---|------|-------|
 | `thread.list_active` | R | — | active threads in the guild |
-| `thread.list_archived` | R | `channel_id\|channel_name`, `limit?` | archived threads under a channel |
-| `thread.info` | R | `thread_id` | |
-| `thread.history` | R | `thread_id`, `limit?` | messages in a thread |
+| `thread.list_archived` | R | `channel_id\|channel_name`, `limit?`, `type?` | `type` ∈ public/private/joined **[new]** |
+| `thread.info` | R | `thread_id` | **[new]** |
+| `thread.history` | R | `thread_id`, `limit?` | messages in a thread **[new]** |
+| `thread.create` | M | `channel_id\|channel_name`, `name`, `type?`, `auto_archive_duration?`, `invitable?`, `slowmode_delay?` | **[new]** |
+| `thread.create_from_message` | M | `channel_id\|channel_name`, `message_id`, `name`, `auto_archive_duration?` | **[new]** |
 | `thread.create_forum_post` | M | `channel_id\|channel_name` (a forum), `name`, `content` | new forum post |
+| `thread.edit` | M | `thread_id`, any of `name`/`archived`/`locked`/`auto_archive_duration`/`slowmode_delay`/`invitable`/`applied_tags` | **[new]** |
+| `thread.archive` | M | `thread_id` | **[new]** |
+| `thread.lock` | M | `thread_id` | **[new]** |
+| `thread.join` | M | `thread_id` | **[new]** |
+| `thread.leave` | M | `thread_id` | **[new]** |
+| `thread.member_add` | M | `thread_id`, `user_id` | **[new]** |
+| `thread.member_remove` | M | `thread_id`, `user_id` | **[new]** |
+| `thread.member_info` | R | `thread_id`, `user_id` | **[new]** |
+| `thread.members_list` | R | `thread_id` | **[new]** |
+| `thread.delete` | M | `thread_id` | **[new]** |
+
+### scheduled-event
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `event.list` | R | — | **[new]** |
+| `event.info` | R | `event_id` | **[new]** |
+| `event.create` | M | `name`, `entity_type`, `start_time`, plus `channel_id?`/`location?`/`end_time?`/`description?`/`privacy_level?`/`image_b64?` | external needs `location`+`end_time` **[new]** |
+| `event.edit` | M | `event_id`, any of `name`/`description`/`location`/`start_time`/`end_time`/`channel_id`/`entity_type`/`privacy_level`/`status` | **[new]** |
+| `event.delete` | M | `event_id` | **[new]** |
+| `event.users` | R | `event_id`, `limit?` | interested users **[new]** |
+
+### automod
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `automod.list` | R | — | **[new]** |
+| `automod.info` | R | `rule_id` | **[new]** |
+| `automod.create` | M | `name`, `event_type`, `trigger_type`, plus `trigger_metadata?`/`actions?`/`enabled?`/`exempt_roles?`/`exempt_channels?` | **[new]** |
+| `automod.edit` | M | `rule_id`, any of `name`/`event_type`/`trigger_type`/`trigger_metadata`/`actions`/`enabled`/`exempt_roles`/`exempt_channels` | **[new]** |
+| `automod.delete` | M | `rule_id` | **[new]** |
+
+### sticker
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `sticker.list` | R | — | guild stickers **[new]** |
+| `sticker.info` | R | `sticker_id` | **[new]** |
+| `sticker.get` | R | `sticker_id` | global fetch **[new]** |
+| `sticker.packs` | R | — | premium sticker packs **[new]** |
+| `sticker.create` | M | `name`, `emoji`, `file_b64`, `description?` | **[new]** |
+| `sticker.edit` | M | `sticker_id`, any of `name`/`description`/`emoji` | **[new]** |
+| `sticker.delete` | M | `sticker_id` | **[new]** |
+
+### stage
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `stage.create` | M | `channel_id\|channel_name` (a stage), `topic`, `privacy_level?`, `send_start_notification?`, `scheduled_event_id?` | starts a stage instance **[new]** |
+| `stage.info` | R | `channel_id\|channel_name` | **[new]** |
+| `stage.edit` | M | `channel_id\|channel_name`, `topic?`, `privacy_level?` | **[new]** |
+| `stage.delete` | M | `channel_id\|channel_name` | ends the stage **[new]** |
 
 ### emoji
 | Op | T | Args | Notes |
 |----|---|------|-------|
-| `emoji.list` | R | — | |
-| `emoji.create` | M | `name`, `image_b64`, `reason?` | `image_b64` = base64-encoded image bytes |
-| `emoji.delete` | M | `emoji_id`, `reason?` | |
+| `emoji.list` | R | — | guild emojis |
+| `emoji.info` | R | `emoji_id` | |
+| `emoji.create` | M | `name`, `image_b64` | base64 image bytes |
+| `emoji.edit` | M | `emoji_id`, `name?`, `roles?` | **[new]** |
+| `emoji.delete` | M | `emoji_id` | |
+| `emoji.app_list` | R | — | application (bot) emojis **[new]** |
+| `emoji.app_info` | R | `emoji_id` | **[new]** |
+| `emoji.app_create` | M | `name`, `image_b64` | **[new]** |
+| `emoji.app_edit` | M | `emoji_id`, `name` | **[new]** |
+| `emoji.app_delete` | M | `emoji_id` | **[new]** |
 
 ### invite
 | Op | T | Args | Notes |
 |----|---|------|-------|
-| `invite.list` | R | — | |
-| `invite.create` | M | `channel_id\|channel_name`, `max_age?`, `max_uses?`, `reason?` | `0` = never expire / unlimited |
-| `invite.delete` | M | `code`, `reason?` | invite code string |
+| `invite.list` | R | — | guild invites |
+| `invite.list_guild` | R | — | alias of `invite.list` **[new]** |
+| `invite.info` | R | `code`, `with_counts?`, `with_expiration?` | global fetch by code **[new]** |
+| `invite.create` | M | `channel_id\|channel_name`, `max_age?`, `max_uses?`, `temporary?`, `unique?`, `target_type?`, `target_user_id?` | `0` = never expire / unlimited |
+| `invite.delete` | M | `code` | invite code string |
 
 ### webhook
 | Op | T | Args | Notes |
 |----|---|------|-------|
 | `webhook.list` | R | `channel_id\|channel_name` | |
-| `webhook.create` | M | `channel_id\|channel_name`, `name`, `reason?` | |
-| `webhook.delete` | M | `channel_id\|channel_name`, `webhook_id`, `reason?` | |
+| `webhook.guild_list` | R | — | all webhooks in the guild **[new]** |
+| `webhook.info` | R | `webhook_id` | **[new]** |
+| `webhook.create` | M | `channel_id\|channel_name`, `name` | |
+| `webhook.edit` | M | `webhook_id`, `name?`, `channel_id?` | **[new]** |
+| `webhook.execute` | M | `webhook_id`, `content?`, `embeds?`, `files?`, `username?`, `avatar_url?`, `thread_id?`, `tts?` | post as the webhook; components rejected **[new]** |
+| `webhook.message_get` | R | `webhook_id`, `message_id`, `thread_id?` | **[new]** |
+| `webhook.message_edit` | M | `webhook_id`, `message_id`, `content?`, `embeds?`, `allowed_mentions?`, `thread_id?` | **[new]** |
+| `webhook.message_delete` | M | `webhook_id`, `message_id`, `thread_id?` | **[new]** |
+| `webhook.delete` | M | `channel_id\|channel_name`, `webhook_id` | |
+
+### voice
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `voice.state_get` | R | `user_id?` | defaults to the bot **[new]** |
+| `voice.state_self_set` | M | `channel_id?` and/or `suppress?`/`request_to_speak?` | the bot's own voice state **[new]** |
+| `voice.state_set` | M | `user_id`, `channel_id?`, `suppress?` | another member's voice state **[new]** |
+
+### soundboard
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `soundboard.list` | R | `include_default?` | **[new]** |
+| `soundboard.info` | R | `sound_id` | **[new]** |
+| `soundboard.create` | M | `name`, `sound_b64`, `volume?`, `emoji?` | **[new]** |
+| `soundboard.edit` | M | `sound_id`, any of `name`/`volume`/`emoji` | **[new]** |
+| `soundboard.delete` | M | `sound_id` | **[new]** |
+
+### template
+| Op | T | Args | Notes |
+|----|---|------|-------|
+| `template.list` | R | — | guild templates **[new]** |
+| `template.get` | R | `code` | global fetch by code **[new]** |
+| `template.create` | M | `name`, `description?` | snapshot the guild **[new]** |
+| `template.sync` | M | `code` | resync to current state **[new]** |
+| `template.edit` | M | `code`, `name?`, `description?` | **[new]** |
+| `template.delete` | M | `code` | **[new]** |
+
+---
+
+### Bot presence
+
+Presence is **ephemeral process state**, not a Discord setting — it is held in memory by the running
+bot and **lost on restart**, never persisted.
+
+- `bot.presence_set` — `type` (playing/streaming/listening/watching/competing), `name` (activity
+  text), `status` (online/idle/dnd/invisible), `url` (only meaningful for `streaming`). All optional;
+  pass what you want to change.
+- `bot.presence_clear` — clears the activity back to none.
+- `bot.presence_get` — returns the presence the bot currently holds in memory.
+
+### Rich messages
+
+`message.send` and `message.edit` (and `user.dm_send`, `webhook.execute`) accept a full rich payload,
+not just `content`. Supported keys:
+
+- **`content`** — plain text.
+- **`embeds`** — JSON array of raw Discord embed objects (max 10).
+- **`components`** — JSON array of raw Discord component rows (buttons, selects). `send`/`edit` only —
+  `webhook.execute` rejects components.
+- **`files`** — JSON array of `{"filename": ..., "data": <base64>}` attachments.
+- **`poll`** — `{"question": ..., "answers": [...], "duration_hours": ..., "multiple": false}`.
+- **`message_reference`** or **`reply`** — reply to a message (`reply` =
+  `{"message_id": ..., "channel_id"?: ..., "fail_if_not_exists"?: ...}`).
+- **`sticker_ids`** — JSON array of sticker ids to send.
+- **`allowed_mentions`** — control which mentions ping (`{"users": [...], "roles": [...],
+  "everyone": false}`).
+- **`tts`**, **`silent`** (suppress notifications), **`suppress_embeds`**, and **`flags`** (edit only).
+
+Pass complex args from files with `--arg key=@file.json`. Example — an embed plus a button row:
+
+```bash
+# e.json — [ { "title": "Release v0.2.0", "description": "179 ops now live", "color": 5793266 } ]
+# c.json — [ { "type": 1, "components": [
+#             { "type": 2, "style": 5, "label": "Changelog", "url": "https://example.com" } ] } ]
+uv run dctl run message.send \
+  --arg channel_name=announcements \
+  --arg embeds=@e.json \
+  --arg components=@c.json \
+  --confirm
+```
 
 ---
 
