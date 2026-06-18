@@ -32,8 +32,10 @@ immediately with close code **4014** (`PrivilegedIntentsRequired`) and never rea
 `control bus on ...` log line. The DigiGrow bot already has all three enabled; verify before
 continuing.
 
-Copy the bot token from this tab (Reset Token if you don't have it). It goes into `.env` as
-`DISCORD_TOKEN` in the next step.
+Copy the bot token from this tab. It goes into `.env` as `DISCORD_TOKEN` in the next step.
+For the DigiGrow bot the token is **already in `.env`**, so you can skip this — do **not** click
+"Reset Token" (that invalidates the current token and would break the running daemon). Only reset
+if no token exists anywhere.
 
 ## 2. `.env`
 
@@ -123,7 +125,9 @@ uv run dctl op guild.info
 
 - `health` should return `{"ok": true, "data": {"status": "ready"}}`.
 - `ops` lists every registered operation and whether it mutates.
-- `op guild.info` is a read; it resolves the default guild and returns its info.
+- `op guild.info` is a read; it resolves the default guild and returns its info. This requires
+  `DEFAULT_GUILD_ID` to be set (step 2) — otherwise it errors with `guild_id required (no default
+  configured)`; you can instead target a guild explicitly with `--arg guild_id=<id>`.
 
 ### First mutation: dry-run → confirm
 
