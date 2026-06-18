@@ -344,3 +344,29 @@ them act. Full detail is in `docs/SETUP.md`.
 
 When in doubt: `dctl ops` lists everything available, dry-run shows what *would* happen, and
 `audit.jsonl` records what *did*.
+
+---
+
+## 10. Reference: Discord's official docs
+
+discordctl is a thin layer over the Discord API, so Discord's own documentation is the source of
+truth for semantics you need while operating it — exact **permission names** (for
+`permissions.channel_overwrite_set` `allow`/`deny`), **rate limits**, **intents**, channel/role
+**field constraints**, message **component/embed** structure, audit-log action types, and ID/snowflake
+rules. Consult it whenever a value or limit is unclear rather than guessing.
+
+**Docs home:** <https://docs.discord.com/>
+
+**It's fully agent-readable** — no scraping HTML:
+
+1. **Discover every page** from the sitemap (≈150 pages):
+   <https://docs.discord.com/sitemap.xml> — each `<loc>` is a page URL. (There's also an
+   LLM-oriented index at <https://docs.discord.com/llms.txt>.)
+2. **Read any page as Markdown** by appending `.md` to its URL. For example, the page
+   `https://docs.discord.com/developers/components/using-message-components`
+   becomes a clean Markdown document at
+   `https://docs.discord.com/developers/components/using-message-components.md`.
+
+So the workflow is: pull `sitemap.xml` → pick the relevant page URL → fetch that URL **+ `.md`** →
+read the Markdown. Use it to confirm permission flag names, limits, and payload shapes before issuing
+a mutation.
