@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import discord
+
 from typing import Any
 
 
@@ -71,7 +73,7 @@ def overwrite_dict(target: Any, overwrite: Any) -> dict[str, Any]:
     return {
         "target_id": _id(target.id),
         "target_name": getattr(target, "name", None),
-        "target_type": "role" if target.__class__.__name__ == "Role" else "member",
+        "target_type": "role" if isinstance(target, discord.Role) else "member",
         "allow": str(allow.value),
         "deny": str(deny.value),
     }
