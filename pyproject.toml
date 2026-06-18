@@ -1,0 +1,33 @@
+[project]
+name = "claude-control"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Zach Lagden", email = "zach@zachlagden.uk" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9,<4",
+    "discord-py>=2.4,<3",
+    "pydantic>=2,<3",
+    "python-dotenv>=1,<2",
+    "sentry-sdk>=2,<3",
+]
+
+[project.scripts]
+dctl = "claude_control.cli.dctl:main"
+
+[build-system]
+requires = ["uv_build>=0.11.11,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "pytest-asyncio>=0.23,<1",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
