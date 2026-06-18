@@ -9,6 +9,9 @@ EXPECTED_MUTATING = {
     "channel.move",
     "channel.clone",
     "channel.sync",
+    "channel.follow",
+    "channel.voice_status_set",
+    "channel.typing",
     "category.create",
     "category.edit",
     "category.delete",
@@ -168,7 +171,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 159
+    assert len(REGISTRY.ops()) == 162
 
 
 def test_mutating_flags_match_plan():
