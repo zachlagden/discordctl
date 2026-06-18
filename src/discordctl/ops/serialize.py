@@ -171,6 +171,33 @@ def thread_dict(thread: Any) -> dict[str, Any]:
     }
 
 
+def scheduled_event_dict(e: Any) -> dict[str, Any]:
+    entity_type = getattr(e, "entity_type", None)
+    status = getattr(e, "status", None)
+    privacy_level = getattr(e, "privacy_level", None)
+    start_time = getattr(e, "start_time", None)
+    end_time = getattr(e, "end_time", None)
+    return {
+        "id": _id(getattr(e, "id", None)),
+        "guild_id": _id(getattr(e, "guild_id", None)),
+        "name": getattr(e, "name", None),
+        "description": getattr(e, "description", None),
+        "entity_type": str(getattr(entity_type, "name", entity_type))
+        if entity_type is not None
+        else None,
+        "status": str(getattr(status, "name", status)) if status is not None else None,
+        "privacy_level": str(getattr(privacy_level, "name", privacy_level))
+        if privacy_level is not None
+        else None,
+        "start_time": str(start_time) if start_time is not None else None,
+        "end_time": str(end_time) if end_time is not None else None,
+        "channel_id": _id(getattr(e, "channel_id", None)),
+        "creator_id": _id(getattr(e, "creator_id", None)),
+        "user_count": getattr(e, "user_count", None),
+        "location": getattr(e, "location", None),
+    }
+
+
 def guild_dict(guild: Any) -> dict[str, Any]:
     return {
         "id": _id(guild.id),

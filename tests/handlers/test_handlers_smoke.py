@@ -61,6 +61,9 @@ EXPECTED_MUTATING = {
     "thread.member_add",
     "thread.member_remove",
     "thread.delete",
+    "event.create",
+    "event.edit",
+    "event.delete",
     "emoji.create",
     "emoji.delete",
     "invite.create",
@@ -107,6 +110,9 @@ EXPECTED_READ = {
     "thread.history",
     "thread.member_info",
     "thread.members_list",
+    "event.list",
+    "event.info",
+    "event.users",
     "emoji.list",
     "invite.list",
     "webhook.list",
@@ -115,7 +121,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 106
+    assert len(REGISTRY.ops()) == 112
 
 
 def test_mutating_flags_match_plan():
