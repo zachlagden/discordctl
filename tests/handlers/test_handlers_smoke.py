@@ -44,6 +44,10 @@ EXPECTED_MUTATING = {
     "message.pin",
     "message.unpin",
     "message.react",
+    "message.reaction_remove",
+    "message.reactions_clear",
+    "message.crosspost",
+    "message.bulk_delete",
     "permissions.channel_overwrite_set",
     "permissions.channel_overwrite_clear",
     "thread.create_forum_post",
@@ -80,6 +84,9 @@ EXPECTED_READ = {
     "member.info",
     "message.history",
     "message.search",
+    "message.get",
+    "message.reactions_list",
+    "message.pins_list",
     "poll.voters",
     "permissions.channel_overwrites",
     "permissions.resolve_member",
@@ -96,7 +103,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 87
+    assert len(REGISTRY.ops()) == 94
 
 
 def test_mutating_flags_match_plan():

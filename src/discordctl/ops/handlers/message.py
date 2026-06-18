@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import discord
+
 from discordctl.ops import serialize
 from discordctl.ops.lookup import resolve_channel, resolve_guild
 from discordctl.ops.message_build import build_message_kwargs, perform_edit, perform_send
@@ -8,6 +10,21 @@ from discordctl.ops.registry import HandlerError, op, plan
 
 async def _fetch_message(channel, message_id):
     return await channel.fetch_message(int(message_id))
+
+
+def _find_reaction(message, emoji):
+    target = str(emoji)
+    for reaction in getattr(message, "reactions", []):
+        current = reaction.emoji
+        if str(current) == target:
+            return reaction
+        name = getattr(current, "name", None)
+        rid = getattr(current, "id", None)
+        if name == target:
+            return reaction
+        if rid is not None and f"{name}:{rid}" == target:
+            return reaction
+    return None
 
 
 @op("message.history")
@@ -127,6 +144,106 @@ async def react(ctx, args):
     message = await _fetch_message(channel, args["message_id"])
     await message.add_reaction(emoji)
     return {"reacted": str(args["message_id"]), "emoji": emoji}
+
+
+@op("message.get")
+async def get(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    message = await _fetch_message(channel, args["message_id"])
+    return serialize.message_dict(message)
+
+
+@op("message.reactions_list")
+async def reactions_list(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    message = await _fetch_message(channel, args["message_id"])
+    reaction = _find_reaction(message, args["emoji"])
+    if reaction is None:
+        return []
+    limit = int(args.get("limit", 100))
+    return [serialize.user_dict(u) async for u in reaction.users(limit=limit)]
+
+
+@op("message.reaction_remove", mutating=True)
+async def reaction_remove(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    emoji = args["emoji"]
+    user_id = args.get("user_id")
+    if ctx.dry_run:
+        return plan(
+            "message.reaction_remove",
+            channel_id=str(channel.id),
+            message_id=str(args["message_id"]),
+            emoji=emoji,
+            user_id=str(user_id) if user_id is not None else None,
+        )
+    message = await _fetch_message(channel, args["message_id"])
+    if user_id is not None:
+        await message.remove_reaction(emoji, discord.Object(id=int(user_id)))
+    else:
+        await message.remove_reaction(emoji, ctx.bot.user)
+    return {"removed": str(args["message_id"]), "emoji": emoji}
+
+
+@op("message.reactions_clear", mutating=True)
+async def reactions_clear(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    emoji = args.get("emoji")
+    if ctx.dry_run:
+        return plan(
+            "message.reactions_clear",
+            channel_id=str(channel.id),
+            message_id=str(args["message_id"]),
+            emoji=emoji,
+        )
+    message = await _fetch_message(channel, args["message_id"])
+    if emoji is not None:
+        await message.clear_reaction(emoji)
+    else:
+        await message.clear_reactions()
+    return {"cleared": str(args["message_id"]), "emoji": emoji}
+
+
+@op("message.pins_list")
+async def pins_list(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    return [serialize.message_dict(m) async for m in channel.pins()]
+
+
+@op("message.crosspost", mutating=True)
+async def crosspost(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    if ctx.dry_run:
+        return plan(
+            "message.crosspost",
+            channel_id=str(channel.id),
+            message_id=str(args["message_id"]),
+        )
+    message = await _fetch_message(channel, args["message_id"])
+    await message.publish()
+    return serialize.message_dict(message)
+
+
+@op("message.bulk_delete", mutating=True)
+async def bulk_delete(ctx, args):
+    guild = resolve_guild(ctx, args)
+    channel = resolve_channel(guild, args)
+    message_ids = args["message_ids"]
+    if not isinstance(message_ids, list):
+        raise HandlerError("message_ids must be a list", code="bad_args")
+    count = len(message_ids)
+    if count < 2 or count > 100:
+        raise HandlerError("bulk_delete requires between 2 and 100 messages", code="bad_args")
+    if ctx.dry_run:
+        return plan("message.bulk_delete", channel_id=str(channel.id), count=count)
+    await channel.delete_messages([discord.Object(id=int(x)) for x in message_ids])
+    return {"deleted": count, "channel_id": str(channel.id)}
 
 
 @op("poll.end", mutating=True)
