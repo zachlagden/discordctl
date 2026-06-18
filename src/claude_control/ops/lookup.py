@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from claude_control.ops.registry import BusContext, HandlerError
@@ -20,7 +21,7 @@ def resolve_guild(ctx: BusContext, args: dict[str, Any]) -> Any:
 
 def _by_id_or_name(
     items: list[Any], args: dict[str, Any], id_key: str, name_key: str, label: str,
-    getter=None,
+    getter: Callable[[int], Any] | None = None,
 ) -> Any:
     if args.get(id_key) is not None:
         target_id = int(args[id_key])
@@ -61,7 +62,6 @@ def resolve_channel(guild: Any, args: dict[str, Any], key: str = "channel_id") -
 def resolve_category(guild: Any, args: dict[str, Any], key: str = "category_id") -> Any:
     return _by_id_or_name(
         list(guild.categories), args, key, "category_name", "category",
-        getattr(guild, "get_channel", None),
     )
 
 

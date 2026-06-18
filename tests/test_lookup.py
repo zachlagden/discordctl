@@ -40,3 +40,31 @@ def test_resolve_role_by_id():
     role = SimpleNamespace(id=10, name="mod")
     guild = SimpleNamespace(roles=[role], get_role=lambda rid: role if rid == 10 else None)
     assert resolve_role(guild, {"role_id": 10}) is role
+
+
+def test_resolve_category_by_id_ignores_non_category_with_same_id():
+    from types import SimpleNamespace
+    cat = SimpleNamespace(id=300, name="staff")
+    other = SimpleNamespace(id=300, name="general")
+    guild = SimpleNamespace(categories=[cat], get_channel=lambda cid: other)
+    from claude_control.ops.lookup import resolve_category
+    assert resolve_category(guild, {"category_id": 300}) is cat
+
+
+def test_resolve_user_id_requires_arg():
+    from claude_control.ops.lookup import resolve_user_id
+    from claude_control.ops.registry import HandlerError
+    with pytest.raises(HandlerError):
+        resolve_user_id({})
+    assert resolve_user_id({"user_id": 5}) == 5
+
+
+async def test_resolve_member_by_id_uses_cache_then_fetch():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from claude_control.ops.lookup import resolve_member
+    member = SimpleNamespace(id=100, name="alice")
+    guild = SimpleNamespace(get_member=lambda uid: member if uid == 100 else None,
+                            fetch_member=AsyncMock())
+    assert await resolve_member(guild, {"user_id": 100}) is member
+    guild.fetch_member.assert_not_called()
