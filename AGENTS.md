@@ -359,14 +359,13 @@ rules. Consult it whenever a value or limit is unclear rather than guessing.
 
 **It's fully agent-readable** — no scraping HTML:
 
-1. **Discover every page** from the sitemap (≈150 pages):
-   <https://docs.discord.com/sitemap.xml> — each `<loc>` is a page URL. (There's also an
-   LLM-oriented index at <https://docs.discord.com/llms.txt>.)
-2. **Read any page as Markdown** by appending `.md` to its URL. For example, the page
-   `https://docs.discord.com/developers/components/using-message-components`
-   becomes a clean Markdown document at
-   `https://docs.discord.com/developers/components/using-message-components.md`.
+1. **Start from the LLM index:** <https://docs.discord.com/llms.txt> — a Markdown index of every
+   page (~150) with a one-line description and a **direct link to that page's `.md` version**. Skim
+   it to find the page you need, then fetch the `.md` link it gives you.
+2. **Any page URL → Markdown:** append `.md` to a docs page URL to read it as Markdown — e.g.
+   `https://docs.discord.com/developers/components/using-message-components` →
+   `…/using-message-components.md`. (Handy when you have a page link from elsewhere; the entries in
+   `llms.txt` already point straight at the `.md` files.)
 
-So the workflow is: pull `sitemap.xml` → pick the relevant page URL → fetch that URL **+ `.md`** →
-read the Markdown. Use it to confirm permission flag names, limits, and payload shapes before issuing
-a mutation.
+So the workflow is: read `llms.txt` → pick the relevant page's `.md` link → read the Markdown. Use it
+to confirm permission flag names, limits, and payload shapes before issuing a mutation.
