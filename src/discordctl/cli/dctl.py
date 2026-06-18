@@ -89,7 +89,7 @@ def _emit(text: str, *, as_json: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="dctl", description="claude-control CLI")
+    parser = argparse.ArgumentParser(prog="dctl", description="discordctl CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("health")
     sub.add_parser("ops")

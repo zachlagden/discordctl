@@ -1,11 +1,10 @@
 from types import SimpleNamespace
 
 import discord
-import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
-from claude_control.daemon.server import build_app, compute_gating, KEY_REGISTRY
-from claude_control.ops.registry import Registry
+from discordctl.daemon.server import build_app, compute_gating, KEY_REGISTRY
+from discordctl.ops.registry import Registry
 
 
 def test_compute_gating_read_op():
@@ -37,12 +36,19 @@ class FakeAudit:
 
 
 async def _client(registry, write_enabled=True):
-    from claude_control.config import Config
+    from discordctl.config import Config
 
     cfg = Config(
-        discord_token="t", bus_host="127.0.0.1", bus_port=0, bus_token="secret",
-        write_enabled=write_enabled, allowed_guild_ids=frozenset({1}),
-        default_guild_id=1, log_level="INFO", sentry_dsn=None, audit_path="x",
+        discord_token="t",
+        bus_host="127.0.0.1",
+        bus_port=0,
+        bus_token="secret",
+        write_enabled=write_enabled,
+        allowed_guild_ids=frozenset({1}),
+        default_guild_id=1,
+        log_level="INFO",
+        sentry_dsn=None,
+        audit_path="x",
     )
     app = build_app(bot=SimpleNamespace(), config=cfg, audit=FakeAudit())
     app[KEY_REGISTRY] = registry
@@ -67,7 +73,8 @@ async def test_read_op_executes(monkeypatch):
     client = await _client(reg)
     await client.start_server()
     resp = await client.post(
-        "/v1/op", json={"op": "guild.info"},
+        "/v1/op",
+        json={"op": "guild.info"},
         headers={"Authorization": "Bearer secret"},
     )
     body = await resp.json()
@@ -90,7 +97,8 @@ async def test_mutation_without_confirm_is_dry_run():
     client = await _client(reg)
     await client.start_server()
     resp = await client.post(
-        "/v1/op", json={"op": "member.ban", "args": {}},
+        "/v1/op",
+        json={"op": "member.ban", "args": {}},
         headers={"Authorization": "Bearer secret"},
     )
     body = await resp.json()
@@ -122,13 +130,16 @@ def _resp(status, headers=None):
 
 async def test_forbidden_maps_403():
     reg = Registry()
+
     async def h(ctx, args):
         raise discord.Forbidden(_resp(403), "Missing Permissions")
+
     reg.register("x.forbidden", h)
     client = await _client(reg)
     await client.start_server()
-    resp = await client.post("/v1/op", json={"op": "x.forbidden"},
-                             headers={"Authorization": "Bearer secret"})
+    resp = await client.post(
+        "/v1/op", json={"op": "x.forbidden"}, headers={"Authorization": "Bearer secret"}
+    )
     assert resp.status == 403
     body = await resp.json()
     assert body["error"]["code"] == "forbidden"
@@ -137,26 +148,32 @@ async def test_forbidden_maps_403():
 
 async def test_notfound_maps_404():
     reg = Registry()
+
     async def h(ctx, args):
         raise discord.NotFound(_resp(404), "Unknown")
+
     reg.register("x.missing", h)
     client = await _client(reg)
     await client.start_server()
-    resp = await client.post("/v1/op", json={"op": "x.missing"},
-                             headers={"Authorization": "Bearer secret"})
+    resp = await client.post(
+        "/v1/op", json={"op": "x.missing"}, headers={"Authorization": "Bearer secret"}
+    )
     assert resp.status == 404
     await client.close()
 
 
 async def test_httpexception_maps_status_and_retry_after():
     reg = Registry()
+
     async def h(ctx, args):
         raise discord.HTTPException(_resp(429, {"Retry-After": "5"}), "rate limited")
+
     reg.register("x.ratelimited", h)
     client = await _client(reg)
     await client.start_server()
-    resp = await client.post("/v1/op", json={"op": "x.ratelimited"},
-                             headers={"Authorization": "Bearer secret"})
+    resp = await client.post(
+        "/v1/op", json={"op": "x.ratelimited"}, headers={"Authorization": "Bearer secret"}
+    )
     assert resp.status == 429
     body = await resp.json()
     assert body["error"]["retry_after"] == 5.0

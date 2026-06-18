@@ -71,7 +71,7 @@ def plan(action: str, **details: Any) -> dict[str, Any]:
 
 
 def load_all_handlers() -> None:
-    from claude_control.ops import handlers as handlers_pkg
+    from discordctl.ops import handlers as handlers_pkg
 
     for mod in pkgutil.iter_modules(handlers_pkg.__path__):
-        importlib.import_module(f"claude_control.ops.handlers.{mod.name}")
+        importlib.import_module(f"discordctl.ops.handlers.{mod.name}")

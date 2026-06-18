@@ -1,12 +1,20 @@
 from types import SimpleNamespace
 
-from claude_control.ops.handlers import bot as bot_ops
-from claude_control.ops.registry import BusContext
+from discordctl.ops.handlers import bot as bot_ops
+from discordctl.ops.registry import BusContext
 
 
 def make_ctx(bot):
-    return BusContext(bot=bot, dry_run=False, confirm=False, yes_really=False,
-                      actor="t", write_enabled=True, allowed_guild_ids=frozenset(), default_guild_id=None)
+    return BusContext(
+        bot=bot,
+        dry_run=False,
+        confirm=False,
+        yes_really=False,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=frozenset(),
+        default_guild_id=None,
+    )
 
 
 async def test_ping_returns_latency():
@@ -16,7 +24,8 @@ async def test_ping_returns_latency():
 
 
 async def test_version():
-    import claude_control
+    import discordctl
+
     ctx = make_ctx(SimpleNamespace())
     result = await bot_ops.version(ctx, {})
-    assert result["version"] == claude_control.__version__
+    assert result["version"] == discordctl.__version__

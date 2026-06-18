@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_channel, resolve_guild
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_channel, resolve_guild
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 @op("invite.list")
@@ -19,7 +19,8 @@ async def create(ctx, args):
     if ctx.dry_run:
         return plan("invite.create", channel_id=str(channel.id))
     invite = await channel.create_invite(
-        max_age=int(args.get("max_age", 0)), max_uses=int(args.get("max_uses", 0)),
+        max_age=int(args.get("max_age", 0)),
+        max_uses=int(args.get("max_uses", 0)),
         reason=args.get("reason"),
     )
     return serialize.invite_dict(invite)

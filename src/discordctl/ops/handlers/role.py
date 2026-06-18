@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import discord
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_guild, resolve_role
-from claude_control.ops.registry import op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_guild, resolve_role
+from discordctl.ops.registry import op, plan
 
 
 def _colour(value):
@@ -89,8 +89,10 @@ async def clone(ctx, args):
     new = await guild.create_role(
         name=args.get("name", f"{role.name} copy"),
         permissions=discord.Permissions(role.permissions.value),
-        colour=discord.Colour(role.color.value), hoist=role.hoist,
-        mentionable=role.mentionable, reason=args.get("reason"),
+        colour=discord.Colour(role.color.value),
+        hoist=role.hoist,
+        mentionable=role.mentionable,
+        reason=args.get("reason"),
     )
     return serialize.role_dict(new)
 

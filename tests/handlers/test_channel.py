@@ -3,19 +3,28 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from claude_control.ops.handlers import channel as channel_ops
-from claude_control.ops.registry import BusContext, HandlerError
+from discordctl.ops.handlers import channel as channel_ops
+from discordctl.ops.registry import BusContext, HandlerError
 
 
 def make_guild():
     ch = SimpleNamespace(
-        id=200, name="general", position=0,
-        type=SimpleNamespace(name="text"), category_id=None, topic=None,
-        nsfw=False, slowmode_delay=0,
-        edit=AsyncMock(), delete=AsyncMock(), clone=AsyncMock(),
+        id=200,
+        name="general",
+        position=0,
+        type=SimpleNamespace(name="text"),
+        category_id=None,
+        topic=None,
+        nsfw=False,
+        slowmode_delay=0,
+        edit=AsyncMock(),
+        delete=AsyncMock(),
+        clone=AsyncMock(),
     )
     guild = SimpleNamespace(
-        id=1, channels=[ch], text_channels=[ch],
+        id=1,
+        channels=[ch],
+        text_channels=[ch],
         get_channel=lambda cid: ch if cid == 200 else None,
         create_text_channel=AsyncMock(return_value=ch),
         create_category=AsyncMock(return_value=ch),
@@ -24,9 +33,16 @@ def make_guild():
 
 
 def ctx_for(guild, dry_run):
-    return BusContext(bot=SimpleNamespace(get_guild=lambda gid: guild),
-                      dry_run=dry_run, confirm=not dry_run, yes_really=False, actor="t",
-                      write_enabled=True, allowed_guild_ids=frozenset({1}), default_guild_id=1)
+    return BusContext(
+        bot=SimpleNamespace(get_guild=lambda gid: guild),
+        dry_run=dry_run,
+        confirm=not dry_run,
+        yes_really=False,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=frozenset({1}),
+        default_guild_id=1,
+    )
 
 
 async def test_create_dry_run():

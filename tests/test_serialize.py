@@ -1,6 +1,6 @@
 from tests.conftest import make_channel, make_member, make_role
 
-from claude_control.ops.serialize import channel_dict, member_dict, role_dict
+from discordctl.ops.serialize import channel_dict, member_dict, role_dict
 
 
 def test_role_dict_stringifies_id():

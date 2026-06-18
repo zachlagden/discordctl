@@ -1,5 +1,5 @@
 services:
-  claude-control:
+  discordctl:
     build: .
     env_file: .env
     environment:

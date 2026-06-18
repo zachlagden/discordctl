@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_category, resolve_guild
-from claude_control.ops.registry import op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_category, resolve_guild
+from discordctl.ops.registry import op, plan
 
 
 @op("category.list")

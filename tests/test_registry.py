@@ -1,8 +1,7 @@
 import pytest
 
-from claude_control.ops.registry import (
+from discordctl.ops.registry import (
     REGISTRY,
-    BusContext,
     HandlerError,
     Registry,
     op,

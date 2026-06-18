@@ -1,4 +1,4 @@
-from claude_control.daemon.bot import make_intents
+from discordctl.daemon.bot import make_intents
 
 
 def test_intents_enable_all_privileged():

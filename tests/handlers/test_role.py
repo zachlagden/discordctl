@@ -1,24 +1,43 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from claude_control.ops.handlers import role as role_ops
-from claude_control.ops.registry import BusContext
+from discordctl.ops.handlers import role as role_ops
+from discordctl.ops.registry import BusContext
 
 
 def make_guild():
-    role = SimpleNamespace(id=10, name="mod", position=2, hoist=False, mentionable=True,
-                           managed=False, color=SimpleNamespace(value=0x5865F2),
-                           permissions=SimpleNamespace(value=8),
-                           edit=AsyncMock(), delete=AsyncMock())
-    guild = SimpleNamespace(id=1, roles=[role], get_role=lambda rid: role if rid == 10 else None,
-                            create_role=AsyncMock(return_value=role))
+    role = SimpleNamespace(
+        id=10,
+        name="mod",
+        position=2,
+        hoist=False,
+        mentionable=True,
+        managed=False,
+        color=SimpleNamespace(value=0x5865F2),
+        permissions=SimpleNamespace(value=8),
+        edit=AsyncMock(),
+        delete=AsyncMock(),
+    )
+    guild = SimpleNamespace(
+        id=1,
+        roles=[role],
+        get_role=lambda rid: role if rid == 10 else None,
+        create_role=AsyncMock(return_value=role),
+    )
     return guild, role
 
 
 def ctx_for(guild, dry_run):
-    return BusContext(bot=SimpleNamespace(get_guild=lambda gid: guild),
-                      dry_run=dry_run, confirm=not dry_run, yes_really=False, actor="t",
-                      write_enabled=True, allowed_guild_ids=frozenset({1}), default_guild_id=1)
+    return BusContext(
+        bot=SimpleNamespace(get_guild=lambda gid: guild),
+        dry_run=dry_run,
+        confirm=not dry_run,
+        yes_really=False,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=frozenset({1}),
+        default_guild_id=1,
+    )
 
 
 async def test_create_dry_run():

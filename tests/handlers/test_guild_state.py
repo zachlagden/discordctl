@@ -3,27 +3,49 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from claude_control.ops.handlers.guild_state import apply, build_snapshot, diff_snapshots
-from claude_control.ops.registry import BusContext, HandlerError
+from discordctl.ops.handlers.guild_state import apply, build_snapshot, diff_snapshots
+from discordctl.ops.registry import BusContext, HandlerError
 
 
 def _role(rid, name):
-    return SimpleNamespace(id=rid, name=name, position=rid, hoist=False, mentionable=False,
-                           managed=False, color=SimpleNamespace(value=0),
-                           permissions=SimpleNamespace(value=0))
+    return SimpleNamespace(
+        id=rid,
+        name=name,
+        position=rid,
+        hoist=False,
+        mentionable=False,
+        managed=False,
+        color=SimpleNamespace(value=0),
+        permissions=SimpleNamespace(value=0),
+    )
 
 
 def make_guild(role_names):
     roles = [_role(i + 1, name) for i, name in enumerate(role_names)]
-    return SimpleNamespace(id=1, name="DigiGrow", owner_id=5, member_count=42, description=None,
-                           roles=roles, categories=[], channels=[],
-                           create_role=AsyncMock(return_value=_role(99, "created")))
+    return SimpleNamespace(
+        id=1,
+        name="DigiGrow",
+        owner_id=5,
+        member_count=42,
+        description=None,
+        roles=roles,
+        categories=[],
+        channels=[],
+        create_role=AsyncMock(return_value=_role(99, "created")),
+    )
 
 
 def ctx_for(guild, dry_run, yes_really):
-    return BusContext(bot=SimpleNamespace(get_guild=lambda gid: guild),
-                      dry_run=dry_run, confirm=not dry_run, yes_really=yes_really, actor="t",
-                      write_enabled=True, allowed_guild_ids=frozenset({1}), default_guild_id=1)
+    return BusContext(
+        bot=SimpleNamespace(get_guild=lambda gid: guild),
+        dry_run=dry_run,
+        confirm=not dry_run,
+        yes_really=yes_really,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=frozenset({1}),
+        default_guild_id=1,
+    )
 
 
 def test_diff_detects_create_and_delete():
@@ -75,5 +97,13 @@ async def test_apply_live_creates_role():
 
 
 def _dict_role(name):
-    return {"id": None, "name": name, "position": 0, "color": "#000000", "hoist": False,
-            "mentionable": False, "managed": False, "permissions": "0"}
+    return {
+        "id": None,
+        "name": name,
+        "position": 0,
+        "color": "#000000",
+        "hoist": False,
+        "mentionable": False,
+        "managed": False,
+        "permissions": "0",
+    }

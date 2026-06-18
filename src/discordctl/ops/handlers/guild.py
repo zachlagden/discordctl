@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_guild
-from claude_control.ops.registry import op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_guild
+from discordctl.ops.registry import op, plan
 
 
 @op("guild.info")
@@ -23,13 +23,15 @@ async def audit_log(ctx, args):
     limit = int(args.get("limit", 25))
     out = []
     async for entry in guild.audit_logs(limit=limit):
-        out.append({
-            "action": str(entry.action),
-            "user_id": str(entry.user.id) if entry.user else None,
-            "target_id": str(getattr(entry.target, "id", None)) if entry.target else None,
-            "reason": entry.reason,
-            "created_at": str(entry.created_at),
-        })
+        out.append(
+            {
+                "action": str(entry.action),
+                "user_id": str(entry.user.id) if entry.user else None,
+                "target_id": str(getattr(entry.target, "id", None)) if entry.target else None,
+                "reason": entry.reason,
+                "created_at": str(entry.created_at),
+            }
+        )
     return out
 
 

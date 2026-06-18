@@ -1,6 +1,6 @@
 import pytest
 
-from claude_control.config import Config
+from discordctl.config import Config
 
 
 def test_from_env_parses_all(monkeypatch):

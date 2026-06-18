@@ -1,6 +1,6 @@
 import json
 
-from claude_control.ops.audit import AuditWriter, mk_request_id, now_ms
+from discordctl.ops.audit import AuditWriter, mk_request_id, now_ms
 
 
 def test_mk_request_id_unique():

@@ -10,7 +10,7 @@ All commands run from the repo root on the same host as the daemon.
 ## 1. Start the daemon
 
 ```bash
-uv run python -m claude_control
+uv run python -m discordctl
 ```
 
 - [ ] Log shows `control bus on 127.0.0.1:8765 as <bot>`.

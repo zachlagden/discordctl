@@ -3,26 +3,45 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from claude_control.ops.handlers import member as member_ops
-from claude_control.ops.registry import BusContext, HandlerError
+from discordctl.ops.handlers import member as member_ops
+from discordctl.ops.registry import BusContext, HandlerError
 
 
 def make_guild(owner_id=1):
-    member = SimpleNamespace(id=100, name="alice", display_name="alice", nick=None,
-                            bot=False, roles=[], joined_at=None,
-                            ban=AsyncMock(), kick=AsyncMock())
+    member = SimpleNamespace(
+        id=100,
+        name="alice",
+        display_name="alice",
+        nick=None,
+        bot=False,
+        roles=[],
+        joined_at=None,
+        ban=AsyncMock(),
+        kick=AsyncMock(),
+    )
     guild = SimpleNamespace(
-        id=1, owner_id=owner_id, members=[member],
+        id=1,
+        owner_id=owner_id,
+        members=[member],
         get_member=lambda uid: member if uid == 100 else None,
-        ban=AsyncMock(), kick=AsyncMock(), unban=AsyncMock(),
+        ban=AsyncMock(),
+        kick=AsyncMock(),
+        unban=AsyncMock(),
     )
     return guild, member
 
 
 def ctx_for(guild, dry_run):
-    return BusContext(bot=SimpleNamespace(get_guild=lambda gid: guild),
-                      dry_run=dry_run, confirm=not dry_run, yes_really=False, actor="t",
-                      write_enabled=True, allowed_guild_ids=frozenset({1}), default_guild_id=1)
+    return BusContext(
+        bot=SimpleNamespace(get_guild=lambda gid: guild),
+        dry_run=dry_run,
+        confirm=not dry_run,
+        yes_really=False,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=frozenset({1}),
+        default_guild_id=1,
+    )
 
 
 async def test_ban_dry_run_does_not_call(monkeypatch):

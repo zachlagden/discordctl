@@ -5,11 +5,13 @@ import urllib.parse
 
 
 def build_invite_url(client_id: str, permissions: int = 8) -> str:
-    query = urllib.parse.urlencode({
-        "client_id": client_id,
-        "permissions": permissions,
-        "scope": "bot applications.commands",
-    })
+    query = urllib.parse.urlencode(
+        {
+            "client_id": client_id,
+            "permissions": permissions,
+            "scope": "bot applications.commands",
+        }
+    )
     return f"https://discord.com/api/oauth2/authorize?{query}"
 
 
