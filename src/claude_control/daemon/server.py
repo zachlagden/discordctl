@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiohttp import web
@@ -9,10 +10,15 @@ from pydantic import ValidationError
 
 from claude_control.config import Config
 from claude_control.ops.audit import AuditWriter, mk_request_id, now_ms
-from claude_control.ops.registry import REGISTRY, BusContext, HandlerError
+from claude_control.ops.registry import REGISTRY, BusContext, HandlerError, Registry
 from claude_control.schemas import OpRequest
 
 log = logging.getLogger(__name__)
+
+KEY_BOT = web.AppKey("bot", object)
+KEY_CONFIG = web.AppKey("config", Config)
+KEY_AUDIT = web.AppKey("audit", AuditWriter)
+KEY_REGISTRY = web.AppKey("registry", Registry)
 
 
 def compute_gating(mutating: bool, write_enabled: bool, payload: Any) -> tuple[bool, bool]:
@@ -27,17 +33,17 @@ def compute_gating(mutating: bool, write_enabled: bool, payload: Any) -> tuple[b
 
 def build_app(bot: Any, config: Config, audit: AuditWriter) -> web.Application:
     app = web.Application(middlewares=[_make_auth(config)])
-    app["bot"] = bot
-    app["config"] = config
-    app["audit"] = audit
-    app["registry"] = REGISTRY
+    app[KEY_BOT] = bot
+    app[KEY_CONFIG] = config
+    app[KEY_AUDIT] = audit
+    app[KEY_REGISTRY] = REGISTRY
     app.router.add_get("/v1/health", _health)
     app.router.add_get("/v1/ops", _list_ops)
     app.router.add_post("/v1/op", _handle_op)
     return app
 
 
-def _make_auth(config: Config):
+def _make_auth(config: Config) -> Callable[[web.Request, Callable[[web.Request], Awaitable[web.StreamResponse]]], Awaitable[web.StreamResponse]]:
     @web.middleware
     async def auth(request: web.Request, handler):
         if (request.remote or "") not in ("127.0.0.1", "::1"):
@@ -58,30 +64,39 @@ async def _health(request: web.Request) -> web.Response:
 
 
 async def _list_ops(request: web.Request) -> web.Response:
-    registry = request.app["registry"]
+    registry = request.app[KEY_REGISTRY]
     ops = [{"name": n, "mutating": registry.is_mutating(n)} for n in registry.ops()]
     return web.json_response({"ok": True, "data": {"ops": ops}})
 
 
 async def _handle_op(request: web.Request) -> web.Response:
-    registry = request.app["registry"]
-    config: Config = request.app["config"]
-    audit: AuditWriter = request.app["audit"]
+    registry = request.app[KEY_REGISTRY]
+    config: Config = request.app[KEY_CONFIG]
+    audit: AuditWriter = request.app[KEY_AUDIT]
     request_id = mk_request_id()
     started = now_ms()
 
     try:
         raw = await request.json()
     except Exception as exc:
+        error = f"bad json: {exc}"
+        await audit.record(request_id=request_id, op=None, args=None, actor="claude-code",
+                           dry_run=False, confirm=False, ok=False,
+                           duration_ms=now_ms() - started, error=error, result=None)
         return web.json_response(
-            {"ok": False, "error": f"bad json: {exc}", "request_id": request_id}, status=400
+            {"ok": False, "error": error, "request_id": request_id}, status=400
         )
 
     try:
         payload = OpRequest.model_validate(raw)
     except ValidationError as exc:
+        error = exc.errors()
+        op = raw.get("op") if isinstance(raw, dict) else None
+        await audit.record(request_id=request_id, op=op, args=None, actor="claude-code",
+                           dry_run=False, confirm=False, ok=False,
+                           duration_ms=now_ms() - started, error=error, result=None)
         return web.json_response(
-            {"ok": False, "error": exc.errors(), "request_id": request_id}, status=400
+            {"ok": False, "error": error, "request_id": request_id}, status=400
         )
 
     handler = registry.get(payload.op)
@@ -95,7 +110,7 @@ async def _handle_op(request: web.Request) -> web.Response:
     effective_dry_run, must_confirm = compute_gating(mutating, config.write_enabled, payload)
 
     ctx = BusContext(
-        bot=request.app["bot"], dry_run=effective_dry_run, confirm=payload.confirm,
+        bot=request.app[KEY_BOT], dry_run=effective_dry_run, confirm=payload.confirm,
         yes_really=payload.yes_really, actor="claude-code",
         write_enabled=config.write_enabled, allowed_guild_ids=config.allowed_guild_ids,
         default_guild_id=config.default_guild_id,
@@ -106,9 +121,9 @@ async def _handle_op(request: web.Request) -> web.Response:
         data = await handler(ctx, payload.args)
     except HandlerError as exc:
         ok, error, status = False, {"message": str(exc), "code": exc.code}, 400
-    except Exception as exc:
+    except Exception:
         log.exception("unhandled error in op %s", payload.op)
-        ok, error, status = False, f"internal: {type(exc).__name__}: {exc}", 500
+        ok, error, status = False, "internal server error", 500
 
     body = {
         "ok": ok, "data": data, "error": error, "request_id": request_id,

@@ -1,10 +1,9 @@
-import json
 from types import SimpleNamespace
 
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
-from claude_control.daemon.server import build_app, compute_gating
+from claude_control.daemon.server import build_app, compute_gating, KEY_REGISTRY
 from claude_control.ops.registry import Registry
 
 
@@ -45,7 +44,7 @@ async def _client(registry, write_enabled=True):
         default_guild_id=1, log_level="INFO", sentry_dsn=None, audit_path="x",
     )
     app = build_app(bot=SimpleNamespace(), config=cfg, audit=FakeAudit())
-    app["registry"] = registry
+    app[KEY_REGISTRY] = registry
     return TestClient(TestServer(app))
 
 
@@ -97,4 +96,20 @@ async def test_mutation_without_confirm_is_dry_run():
     assert body["dry_run"] is True
     assert body["must_confirm"] is True
     assert called["live"] is False
+    await client.close()
+
+
+async def test_health_requires_auth():
+    client = await _client(Registry())
+    await client.start_server()
+    resp = await client.get("/v1/health")
+    assert resp.status == 401
+    await client.close()
+
+
+async def test_ops_requires_auth():
+    client = await _client(Registry())
+    await client.start_server()
+    resp = await client.get("/v1/ops")
+    assert resp.status == 401
     await client.close()
