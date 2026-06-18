@@ -51,6 +51,16 @@ EXPECTED_MUTATING = {
     "permissions.channel_overwrite_set",
     "permissions.channel_overwrite_clear",
     "thread.create_forum_post",
+    "thread.create",
+    "thread.create_from_message",
+    "thread.edit",
+    "thread.archive",
+    "thread.lock",
+    "thread.join",
+    "thread.leave",
+    "thread.member_add",
+    "thread.member_remove",
+    "thread.delete",
     "emoji.create",
     "emoji.delete",
     "invite.create",
@@ -95,6 +105,8 @@ EXPECTED_READ = {
     "thread.list_archived",
     "thread.info",
     "thread.history",
+    "thread.member_info",
+    "thread.members_list",
     "emoji.list",
     "invite.list",
     "webhook.list",
@@ -103,7 +115,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 94
+    assert len(REGISTRY.ops()) == 106
 
 
 def test_mutating_flags_match_plan():
