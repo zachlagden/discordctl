@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 audit.jsonl
+data/
 .pytest_cache/
 dist/
 TOKEN
