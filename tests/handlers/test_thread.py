@@ -1,0 +1,34 @@
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+from claude_control.ops.handlers import thread as thread_ops
+from claude_control.ops.registry import BusContext
+
+
+def make_guild():
+    thr = SimpleNamespace(id=400, name="help", parent_id=200, archived=False, locked=False,
+                          member_count=3)
+    forum = SimpleNamespace(id=200, name="forum", type=SimpleNamespace(name="forum"),
+                            create_thread=AsyncMock(return_value=SimpleNamespace(thread=thr)))
+    guild = SimpleNamespace(id=1, threads=[thr], channels=[forum],
+                            get_channel=lambda cid: forum if cid == 200 else None)
+    return guild, forum, thr
+
+
+def ctx_for(guild, dry_run):
+    return BusContext(bot=SimpleNamespace(get_guild=lambda gid: guild),
+                      dry_run=dry_run, confirm=not dry_run, yes_really=False, actor="t",
+                      write_enabled=True, allowed_guild_ids=frozenset({1}), default_guild_id=1)
+
+
+async def test_list_active():
+    guild, forum, thr = make_guild()
+    result = await thread_ops.list_active(ctx_for(guild, True), {})
+    assert result[0]["id"] == "400"
+
+
+async def test_create_forum_post_live():
+    guild, forum, thr = make_guild()
+    await thread_ops.create_forum_post(
+        ctx_for(guild, False), {"channel_id": 200, "name": "Q", "content": "body"})
+    forum.create_thread.assert_awaited_once()
