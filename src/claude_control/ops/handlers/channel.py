@@ -12,6 +12,13 @@ _CREATORS = {
     "stage": "create_stage_channel",
     "category": "create_category",
 }
+_CREATE_OPTIONAL_FIELDS = {
+    "text": ("topic", "nsfw"),
+    "voice": ("nsfw",),
+    "forum": ("topic", "nsfw"),
+    "stage": ("nsfw",),
+    "category": (),
+}
 
 
 @op("channel.list")
@@ -33,13 +40,19 @@ async def create(ctx, args):
     method_name = _CREATORS.get(ctype)
     if method_name is None:
         raise HandlerError(f"unsupported channel type {ctype!r}", code="bad_args")
+    supported = _CREATE_OPTIONAL_FIELDS[ctype]
+    for field in ("topic", "nsfw"):
+        if args.get(field) is not None and field not in supported:
+            raise HandlerError(
+                f"{ctype} channels do not support {field!r}", code="bad_args"
+            )
     name = args["name"]
     if ctx.dry_run:
         return plan("channel.create", type=ctype, name=name)
     kwargs = {}
-    if args.get("category_id") is not None:
+    if ctype != "category" and args.get("category_id") is not None:
         kwargs["category"] = guild.get_channel(int(args["category_id"]))
-    for field in ("topic", "nsfw"):
+    for field in supported:
         if args.get(field) is not None:
             kwargs[field] = args[field]
     channel = await getattr(guild, method_name)(name, reason=args.get("reason"), **kwargs)
