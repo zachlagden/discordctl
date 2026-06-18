@@ -32,3 +32,10 @@ async def test_permissions_set_live():
     guild, role = make_guild()
     await role_ops.permissions_set(ctx_for(guild, False), {"role_id": 10, "permissions": "8"})
     role.edit.assert_awaited_once()
+
+
+async def test_create_int_colour_is_decimal_not_hex():
+    guild, role = make_guild()
+    await role_ops.create(ctx_for(guild, False), {"name": "c", "colour": 16711680})
+    kwargs = guild.create_role.await_args.kwargs
+    assert kwargs["colour"].value == 16711680

@@ -8,6 +8,8 @@ from claude_control.ops.registry import op, plan
 
 
 def _colour(value):
+    if isinstance(value, int):
+        return discord.Colour(value)
     return discord.Colour(int(str(value).lstrip("#"), 16))
 
 
