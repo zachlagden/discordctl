@@ -51,9 +51,7 @@ def guild_with(channel):
 async def test_stage_create_dry_run():
     channel = make_channel()
     guild = guild_with(channel)
-    result = await stage_ops.create(
-        ctx_for(guild, True), {"channel_id": 200, "topic": "live"}
-    )
+    result = await stage_ops.create(ctx_for(guild, True), {"channel_id": 200, "topic": "live"})
     assert result["planned"] is True
     channel.create_instance.assert_not_called()
 
@@ -62,9 +60,7 @@ async def test_stage_create_live():
     channel = make_channel()
     channel.create_instance.return_value = make_instance()
     guild = guild_with(channel)
-    result = await stage_ops.create(
-        ctx_for(guild, False), {"channel_id": 200, "topic": "live"}
-    )
+    result = await stage_ops.create(ctx_for(guild, False), {"channel_id": 200, "topic": "live"})
     channel.create_instance.assert_awaited_once()
     assert result["topic"] == "live"
     assert result["privacy_level"] == "guild_only"
