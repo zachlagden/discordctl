@@ -72,6 +72,9 @@ EXPECTED_MUTATING = {
     "sticker.create",
     "sticker.edit",
     "sticker.delete",
+    "stage.create",
+    "stage.edit",
+    "stage.delete",
     "invite.create",
     "invite.delete",
     "webhook.create",
@@ -126,6 +129,7 @@ EXPECTED_READ = {
     "sticker.info",
     "sticker.get",
     "sticker.packs",
+    "stage.info",
     "invite.list",
     "webhook.list",
 }
@@ -133,7 +137,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 124
+    assert len(REGISTRY.ops()) == 128
 
 
 def test_mutating_flags_match_plan():

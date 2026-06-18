@@ -154,6 +154,19 @@ def sticker_dict(s: Any) -> dict[str, Any]:
     }
 
 
+def stage_dict(i: Any) -> dict[str, Any]:
+    privacy_level = getattr(i, "privacy_level", None)
+    return {
+        "id": _id(getattr(i, "id", None)),
+        "guild_id": _id(getattr(getattr(i, "guild", None), "id", None)),
+        "channel_id": _id(getattr(i, "channel_id", None)),
+        "topic": getattr(i, "topic", None),
+        "privacy_level": str(getattr(privacy_level, "name", privacy_level))
+        if privacy_level is not None
+        else None,
+    }
+
+
 def invite_dict(invite: Any) -> dict[str, Any]:
     return {
         "code": invite.code,
