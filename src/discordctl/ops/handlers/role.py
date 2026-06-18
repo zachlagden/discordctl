@@ -25,6 +25,27 @@ async def info(ctx, args):
     return serialize.role_dict(resolve_role(guild, args))
 
 
+@op("role.member_counts")
+async def member_counts(ctx, args):
+    guild = resolve_guild(ctx, args)
+    counts = {str(role.id): 0 for role in guild.roles}
+    for member in guild.members:
+        for role in getattr(member, "roles", []):
+            key = str(role.id)
+            counts[key] = counts.get(key, 0) + 1
+    return {
+        "source": "cache",
+        "counts": [
+            {
+                "role_id": str(role.id),
+                "name": role.name,
+                "count": counts.get(str(role.id), 0),
+            }
+            for role in guild.roles
+        ],
+    }
+
+
 @op("role.create", mutating=True)
 async def create(ctx, args):
     guild = resolve_guild(ctx, args)

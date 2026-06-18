@@ -83,6 +83,17 @@ EXPECTED_MUTATING = {
     "webhook.execute",
     "webhook.message_edit",
     "webhook.message_delete",
+    "guild.prune",
+    "guild.onboarding_edit",
+    "guild.welcome_screen_edit",
+    "guild.widget_edit",
+    "guild.integration_delete",
+    "guild.incident_actions_set",
+    "member.bulk_ban",
+    "template.create",
+    "template.sync",
+    "template.edit",
+    "template.delete",
 }
 
 EXPECTED_READ = {
@@ -139,12 +150,25 @@ EXPECTED_READ = {
     "webhook.info",
     "webhook.guild_list",
     "webhook.message_get",
+    "guild.prune_count",
+    "guild.onboarding_get",
+    "guild.welcome_screen_get",
+    "guild.widget_get",
+    "guild.integrations_list",
+    "guild.preview",
+    "guild.voice_regions",
+    "guild.vanity_url",
+    "member.bans_list",
+    "member.ban_info",
+    "role.member_counts",
+    "template.list",
+    "template.get",
 }
 
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 135
+    assert len(REGISTRY.ops()) == 159
 
 
 def test_mutating_flags_match_plan():

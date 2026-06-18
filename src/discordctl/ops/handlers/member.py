@@ -66,6 +66,49 @@ async def ban(ctx, args):
     return {"banned": str(uid)}
 
 
+@op("member.bans_list")
+async def bans_list(ctx, args):
+    guild = resolve_guild(ctx, args)
+    limit = int(args.get("limit", 100))
+    out = []
+    async for entry in guild.bans(limit=limit):
+        out.append(serialize.ban_dict(entry))
+    return out
+
+
+@op("member.ban_info")
+async def ban_info(ctx, args):
+    guild = resolve_guild(ctx, args)
+    uid = resolve_user_id(args)
+    try:
+        entry = await guild.fetch_ban(discord.Object(id=uid))
+    except discord.NotFound:
+        raise HandlerError(f"ban for user {uid} not found", code="not_found")
+    return serialize.ban_dict(entry)
+
+
+@op("member.bulk_ban", mutating=True)
+async def bulk_ban(ctx, args):
+    guild = resolve_guild(ctx, args)
+    user_ids = args.get("user_ids")
+    if not user_ids or not (1 <= len(user_ids) <= 200):
+        raise HandlerError("user_ids must contain 1..200 ids", code="bad_args")
+    uids = [int(u) for u in user_ids]
+    if guild.owner_id in uids:
+        raise HandlerError("refusing to act on guild owner", code="refused")
+    if ctx.dry_run:
+        return plan("member.bulk_ban", guild_id=str(guild.id), user_ids=[str(u) for u in uids])
+    result = await guild.bulk_ban(
+        [discord.Object(id=u) for u in uids],
+        reason=args.get("reason"),
+        delete_message_seconds=int(args.get("delete_message_seconds", 0)),
+    )
+    return {
+        "banned": [str(getattr(u, "id", u)) for u in getattr(result, "banned", [])],
+        "failed": [str(getattr(u, "id", u)) for u in getattr(result, "failed", [])],
+    }
+
+
 @op("member.unban", mutating=True)
 async def unban(ctx, args):
     guild = resolve_guild(ctx, args)

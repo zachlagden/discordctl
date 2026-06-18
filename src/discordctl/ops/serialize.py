@@ -271,3 +271,148 @@ def guild_dict(guild: Any) -> dict[str, Any]:
         "member_count": getattr(guild, "member_count", None),
         "description": getattr(guild, "description", None),
     }
+
+
+def ban_dict(entry: Any) -> dict[str, Any]:
+    user = getattr(entry, "user", None)
+    return {
+        "user": user_dict(user) if user is not None else None,
+        "user_id": _id(getattr(user, "id", None)) if user is not None else None,
+        "reason": getattr(entry, "reason", None),
+    }
+
+
+def onboarding_dict(onboarding: Any) -> dict[str, Any]:
+    mode = getattr(onboarding, "mode", None)
+    prompts = []
+    for prompt in getattr(onboarding, "prompts", None) or []:
+        options = []
+        for option in getattr(prompt, "options", None) or []:
+            emoji = getattr(option, "emoji", None)
+            options.append(
+                {
+                    "id": _id(getattr(option, "id", None)),
+                    "title": getattr(option, "title", None),
+                    "description": getattr(option, "description", None),
+                    "emoji": str(emoji) if emoji is not None else None,
+                    "channel_ids": [_id(i) for i in getattr(option, "channel_ids", None) or []],
+                    "role_ids": [_id(i) for i in getattr(option, "role_ids", None) or []],
+                }
+            )
+        prompt_type = getattr(prompt, "type", None)
+        prompts.append(
+            {
+                "id": _id(getattr(prompt, "id", None)),
+                "title": getattr(prompt, "title", None),
+                "type": str(getattr(prompt_type, "name", prompt_type))
+                if prompt_type is not None
+                else None,
+                "single_select": getattr(prompt, "single_select", None),
+                "required": getattr(prompt, "required", None),
+                "in_onboarding": getattr(prompt, "in_onboarding", None),
+                "options": options,
+            }
+        )
+    return {
+        "guild_id": _id(getattr(getattr(onboarding, "guild", None), "id", None)),
+        "enabled": getattr(onboarding, "enabled", None),
+        "mode": str(getattr(mode, "name", mode)) if mode is not None else None,
+        "default_channel_ids": [
+            _id(i) for i in getattr(onboarding, "default_channel_ids", None) or []
+        ],
+        "prompts": prompts,
+    }
+
+
+def welcome_screen_dict(screen: Any) -> dict[str, Any]:
+    channels = []
+    for channel in getattr(screen, "welcome_channels", None) or []:
+        emoji = getattr(channel, "emoji", None)
+        target = getattr(channel, "channel", None)
+        channels.append(
+            {
+                "channel_id": _id(getattr(target, "id", None)) if target is not None else None,
+                "description": getattr(channel, "description", None),
+                "emoji": str(emoji) if emoji is not None else None,
+            }
+        )
+    return {
+        "description": getattr(screen, "description", None),
+        "enabled": getattr(screen, "enabled", None),
+        "welcome_channels": channels,
+    }
+
+
+def widget_dict(widget: Any) -> dict[str, Any]:
+    return {
+        "id": _id(getattr(widget, "id", None)),
+        "name": getattr(widget, "name", None),
+        "invite_url": getattr(widget, "invite_url", None),
+        "json_url": getattr(widget, "json_url", None),
+        "presence_count": getattr(widget, "presence_count", None),
+        "channels": [
+            {"id": _id(getattr(c, "id", None)), "name": getattr(c, "name", None)}
+            for c in getattr(widget, "channels", None) or []
+        ],
+        "members": [
+            {"id": _id(getattr(m, "id", None)), "name": getattr(m, "name", None)}
+            for m in getattr(widget, "members", None) or []
+        ],
+    }
+
+
+def integration_dict(integration: Any) -> dict[str, Any]:
+    account = getattr(integration, "account", None)
+    user = getattr(integration, "user", None)
+    return {
+        "id": _id(getattr(integration, "id", None)),
+        "name": getattr(integration, "name", None),
+        "type": getattr(integration, "type", None),
+        "enabled": getattr(integration, "enabled", None),
+        "account": {
+            "id": _id(getattr(account, "id", None)),
+            "name": getattr(account, "name", None),
+        }
+        if account is not None
+        else None,
+        "user_id": _id(getattr(user, "id", None)) if user is not None else None,
+    }
+
+
+def template_dict(template: Any) -> dict[str, Any]:
+    creator = getattr(template, "creator", None)
+    source_guild = getattr(template, "source_guild", None)
+    created_at = getattr(template, "created_at", None)
+    updated_at = getattr(template, "updated_at", None)
+    return {
+        "code": getattr(template, "code", None),
+        "name": getattr(template, "name", None),
+        "description": getattr(template, "description", None),
+        "url": getattr(template, "url", None),
+        "uses": getattr(template, "uses", None),
+        "is_dirty": getattr(template, "is_dirty", None),
+        "creator_id": _id(getattr(creator, "id", None)) if creator is not None else None,
+        "source_guild_id": _id(getattr(source_guild, "id", None))
+        if source_guild is not None
+        else None,
+        "created_at": str(created_at) if created_at is not None else None,
+        "updated_at": str(updated_at) if updated_at is not None else None,
+    }
+
+
+def voice_region_dict(region: Any) -> dict[str, Any]:
+    if isinstance(region, dict):
+        return {
+            "id": region.get("id"),
+            "name": region.get("name"),
+            "optimal": region.get("optimal"),
+            "deprecated": region.get("deprecated"),
+            "custom": region.get("custom"),
+        }
+    return {
+        "id": getattr(region, "id", None),
+        "name": getattr(region, "name", None),
+        "optimal": getattr(region, "optimal", None),
+        "deprecated": getattr(region, "deprecated", None),
+        "custom": getattr(region, "custom", None),
+    }
