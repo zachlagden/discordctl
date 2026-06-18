@@ -19,6 +19,7 @@ def now_ms() -> int:
 class AuditWriter:
     def __init__(self, path: str) -> None:
         self._path = Path(path)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = asyncio.Lock()
 
     async def record(self, **fields: Any) -> None:
