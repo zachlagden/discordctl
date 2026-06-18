@@ -4,4 +4,4 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 COPY src ./src
-CMD ["uv", "run", "--no-dev", "python", "-m", "claude_control"]
+CMD ["uv", "run", "--no-dev", "python", "-m", "discordctl"]

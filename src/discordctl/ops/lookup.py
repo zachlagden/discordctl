@@ -5,7 +5,7 @@ import discord
 from collections.abc import Callable
 from typing import Any
 
-from claude_control.ops.registry import BusContext, HandlerError
+from discordctl.ops.registry import BusContext, HandlerError
 
 
 def resolve_guild(ctx: BusContext, args: dict[str, Any]) -> Any:
@@ -22,7 +22,11 @@ def resolve_guild(ctx: BusContext, args: dict[str, Any]) -> Any:
 
 
 def _by_id_or_name(
-    items: list[Any], args: dict[str, Any], id_key: str, name_key: str, label: str,
+    items: list[Any],
+    args: dict[str, Any],
+    id_key: str,
+    name_key: str,
+    label: str,
     getter: Callable[[int], Any] | None = None,
 ) -> Any:
     if args.get(id_key) is not None:
@@ -56,14 +60,22 @@ def resolve_role(guild: Any, args: dict[str, Any], key: str = "role_id") -> Any:
 
 def resolve_channel(guild: Any, args: dict[str, Any], key: str = "channel_id") -> Any:
     return _by_id_or_name(
-        list(guild.channels), args, key, "channel_name", "channel",
+        list(guild.channels),
+        args,
+        key,
+        "channel_name",
+        "channel",
         getattr(guild, "get_channel", None),
     )
 
 
 def resolve_category(guild: Any, args: dict[str, Any], key: str = "category_id") -> Any:
     return _by_id_or_name(
-        list(guild.categories), args, key, "category_name", "category",
+        list(guild.categories),
+        args,
+        key,
+        "category_name",
+        "category",
     )
 
 
@@ -79,11 +91,15 @@ async def resolve_member(guild: Any, args: dict[str, Any], key: str = "user_id")
         return member
     name = args.get("user_name")
     if name is not None:
-        matches = [m for m in guild.members if name in (m.name, getattr(m, "nick", None), m.display_name)]
+        matches = [
+            m for m in guild.members if name in (m.name, getattr(m, "nick", None), m.display_name)
+        ]
         if not matches:
             raise HandlerError(f"member {name!r} not found in cache", code="not_found")
         if len(matches) > 1:
-            raise HandlerError(f"{len(matches)} members match {name!r}; pass user_id", code="ambiguous")
+            raise HandlerError(
+                f"{len(matches)} members match {name!r}; pass user_id", code="ambiguous"
+            )
         return matches[0]
     raise HandlerError(f"{key} or user_name required", code="bad_args")
 

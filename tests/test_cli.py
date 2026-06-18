@@ -1,4 +1,4 @@
-from claude_control.cli.dctl import build_body, parse_arg
+from discordctl.cli.dctl import build_body, parse_arg
 
 
 def test_parse_arg_int():
@@ -20,8 +20,11 @@ def test_parse_arg_string():
 def test_build_body_confirm_sets_live():
     body = build_body("member.ban", ["user_id=5"], confirm=True, yes_really=False)
     assert body == {
-        "op": "member.ban", "args": {"user_id": 5},
-        "confirm": True, "dry_run": False, "yes_really": False,
+        "op": "member.ban",
+        "args": {"user_id": 5},
+        "confirm": True,
+        "dry_run": False,
+        "yes_really": False,
     }
 
 

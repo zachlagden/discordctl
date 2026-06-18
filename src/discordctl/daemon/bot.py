@@ -5,10 +5,10 @@ import logging
 import discord
 from aiohttp import web
 
-from claude_control.config import Config
-from claude_control.daemon.server import build_app
-from claude_control.ops.audit import AuditWriter
-from claude_control.ops.registry import REGISTRY, load_all_handlers
+from discordctl.config import Config
+from discordctl.daemon.server import build_app
+from discordctl.ops.audit import AuditWriter
+from discordctl.ops.registry import REGISTRY, load_all_handlers
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,9 @@ class ControlBot(discord.Client):
         site = web.TCPSite(runner, host=self.config.bus_host, port=self.config.bus_port)
         await site.start()
         self._runner, self._site = runner, site
-        log.info("control bus on %s:%s as %s", self.config.bus_host, self.config.bus_port, self.user)
+        log.info(
+            "control bus on %s:%s as %s", self.config.bus_host, self.config.bus_port, self.user
+        )
 
 
 async def run(config: Config) -> None:

@@ -1,21 +1,36 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from claude_control.ops.handlers import guild as guild_ops
-from claude_control.ops.registry import BusContext
+from discordctl.ops.handlers import guild as guild_ops
+from discordctl.ops.registry import BusContext
 
 
 def make_guild():
-    guild = SimpleNamespace(id=1, name="DigiGrow", owner_id=5, member_count=42,
-                            description=None, roles=[1, 2], channels=[1, 2, 3],
-                            categories=[1], edit=AsyncMock())
+    guild = SimpleNamespace(
+        id=1,
+        name="DigiGrow",
+        owner_id=5,
+        member_count=42,
+        description=None,
+        roles=[1, 2],
+        channels=[1, 2, 3],
+        categories=[1],
+        edit=AsyncMock(),
+    )
     return guild
 
 
 def ctx_for(guild, dry_run):
-    return BusContext(bot=SimpleNamespace(get_guild=lambda gid: guild),
-                      dry_run=dry_run, confirm=not dry_run, yes_really=False, actor="t",
-                      write_enabled=True, allowed_guild_ids=frozenset({1}), default_guild_id=1)
+    return BusContext(
+        bot=SimpleNamespace(get_guild=lambda gid: guild),
+        dry_run=dry_run,
+        confirm=not dry_run,
+        yes_really=False,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=frozenset({1}),
+        default_guild_id=1,
+    )
 
 
 async def test_info_counts():
@@ -33,11 +48,16 @@ async def test_edit_dry_run():
 
 
 async def test_audit_log():
-    entry1 = SimpleNamespace(action="role_create", user=None, target=None, reason=None,
-                             created_at="2026-06-18")
-    entry2 = SimpleNamespace(action="role_delete", user=SimpleNamespace(id=5),
-                             target=SimpleNamespace(id=7), reason="cleanup",
-                             created_at="2026-06-18")
+    entry1 = SimpleNamespace(
+        action="role_create", user=None, target=None, reason=None, created_at="2026-06-18"
+    )
+    entry2 = SimpleNamespace(
+        action="role_delete",
+        user=SimpleNamespace(id=5),
+        target=SimpleNamespace(id=7),
+        reason="cleanup",
+        created_at="2026-06-18",
+    )
 
     async def gen(entries):
         for entry in entries:

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import base64
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_guild
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_guild
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 @op("emoji.list")

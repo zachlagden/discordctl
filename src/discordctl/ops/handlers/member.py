@@ -4,9 +4,9 @@ import datetime
 
 import discord
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_guild, resolve_member, resolve_user_id
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_guild, resolve_member, resolve_user_id
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 def _resolve_roles(guild, role_ids):
@@ -30,8 +30,11 @@ async def list_members(ctx, args):
 async def search(ctx, args):
     guild = resolve_guild(ctx, args)
     q = str(args.get("query", "")).lower()
-    out = [serialize.member_dict(m) for m in guild.members
-           if q in m.name.lower() or q in (m.display_name or "").lower()]
+    out = [
+        serialize.member_dict(m)
+        for m in guild.members
+        if q in m.name.lower() or q in (m.display_name or "").lower()
+    ]
     return out[: int(args.get("limit", 25))]
 
 
@@ -56,7 +59,8 @@ async def ban(ctx, args):
     if ctx.dry_run:
         return plan("ban", guild_id=str(guild.id), user_id=str(uid))
     await guild.ban(
-        discord.Object(id=uid), reason=args.get("reason"),
+        discord.Object(id=uid),
+        reason=args.get("reason"),
         delete_message_seconds=int(args.get("delete_message_seconds", 0)),
     )
     return {"banned": str(uid)}

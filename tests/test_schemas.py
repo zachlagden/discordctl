@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from claude_control.schemas import OpRequest
+from discordctl.schemas import OpRequest
 
 
 def test_defaults():

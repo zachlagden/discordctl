@@ -1,5 +1,5 @@
-import claude_control
+import discordctl
 
 
 def test_version_present():
-    assert claude_control.__version__ == "0.1.0"
+    assert discordctl.__version__ == "0.1.0"

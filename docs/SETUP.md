@@ -20,7 +20,7 @@ Open the existing application at <https://discord.com/developers/applications> â
 ### Privileged intents (required)
 
 The daemon builds its gateway connection with `discord.Intents.all()` (see
-`src/claude_control/daemon/bot.py`). That requires **all three** privileged intents to be toggled
+`src/discordctl/daemon/bot.py`). That requires **all three** privileged intents to be toggled
 **ON** under **Bot â†’ Privileged Gateway Intents**:
 
 - **Presence Intent**
@@ -99,7 +99,7 @@ requests `scope=bot applications.commands` with **Administrator** permissions (`
 ## 4. Run the daemon
 
 ```bash
-uv run python -m claude_control
+uv run python -m discordctl
 # or:
 docker compose up -d
 ```

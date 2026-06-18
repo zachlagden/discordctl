@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import claude_control
-from claude_control.ops.registry import REGISTRY, op
+import discordctl
+from discordctl.ops.registry import REGISTRY, op
 
 
 @op("bot.ping")
@@ -11,7 +11,7 @@ async def ping(ctx, args):
 
 @op("bot.version")
 async def version(ctx, args):
-    return {"version": claude_control.__version__}
+    return {"version": discordctl.__version__}
 
 
 @op("bot.guilds")

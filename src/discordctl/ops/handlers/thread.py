@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_channel, resolve_guild
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_channel, resolve_guild
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 @op("thread.list_active")

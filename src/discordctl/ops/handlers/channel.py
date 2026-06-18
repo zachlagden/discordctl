@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_channel, resolve_guild
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_channel, resolve_guild
+from discordctl.ops.registry import HandlerError, op, plan
 
 _EDITABLE = ("name", "topic", "nsfw", "slowmode_delay", "position")
 _CREATORS = {
@@ -43,9 +43,7 @@ async def create(ctx, args):
     supported = _CREATE_OPTIONAL_FIELDS[ctype]
     for field in ("topic", "nsfw"):
         if args.get(field) is not None and field not in supported:
-            raise HandlerError(
-                f"{ctype} channels do not support {field!r}", code="bad_args"
-            )
+            raise HandlerError(f"{ctype} channels do not support {field!r}", code="bad_args")
     name = args["name"]
     if ctx.dry_run:
         return plan("channel.create", type=ctype, name=name)

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import discord
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_channel, resolve_guild, resolve_member, resolve_role
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_channel, resolve_guild, resolve_member, resolve_role
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 async def _resolve_target(guild, args):
@@ -59,8 +59,13 @@ async def channel_overwrite_set(ctx, args):
     target = await _resolve_target(guild, args)
     overwrite = _build_overwrite(args.get("allow"), args.get("deny"))
     if ctx.dry_run:
-        return plan("permissions.channel_overwrite_set", channel_id=str(channel.id),
-                    target_id=str(target.id), allow=args.get("allow"), deny=args.get("deny"))
+        return plan(
+            "permissions.channel_overwrite_set",
+            channel_id=str(channel.id),
+            target_id=str(target.id),
+            allow=args.get("allow"),
+            deny=args.get("deny"),
+        )
     await channel.set_permissions(target, overwrite=overwrite, reason=args.get("reason"))
     return {"channel_id": str(channel.id), "target_id": str(target.id)}
 
@@ -71,7 +76,10 @@ async def channel_overwrite_clear(ctx, args):
     channel = resolve_channel(guild, args)
     target = await _resolve_target(guild, args)
     if ctx.dry_run:
-        return plan("permissions.channel_overwrite_clear", channel_id=str(channel.id),
-                    target_id=str(target.id))
+        return plan(
+            "permissions.channel_overwrite_clear",
+            channel_id=str(channel.id),
+            target_id=str(target.id),
+        )
     await channel.set_permissions(target, overwrite=None, reason=args.get("reason"))
     return {"cleared": str(target.id), "channel_id": str(channel.id)}

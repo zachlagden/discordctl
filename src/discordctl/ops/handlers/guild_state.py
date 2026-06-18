@@ -2,17 +2,22 @@ from __future__ import annotations
 
 from typing import Any
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_guild
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_guild
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 def build_snapshot(guild: Any) -> dict[str, Any]:
     return {
         "guild": serialize.guild_dict(guild),
         "roles": [serialize.role_dict(r) for r in sorted(guild.roles, key=lambda r: r.position)],
-        "categories": [serialize.category_dict(c) for c in sorted(guild.categories, key=lambda c: c.position)],
-        "channels": [serialize.channel_dict(c) for c in sorted(guild.channels, key=lambda c: getattr(c, "position", 0))],
+        "categories": [
+            serialize.category_dict(c) for c in sorted(guild.categories, key=lambda c: c.position)
+        ],
+        "channels": [
+            serialize.channel_dict(c)
+            for c in sorted(guild.channels, key=lambda c: getattr(c, "position", 0))
+        ],
     }
 
 
@@ -21,7 +26,9 @@ def _diff_section(current: list[dict], desired: list[dict]) -> dict[str, list]:
     des_by_name = {i["name"]: i for i in desired if i.get("name")}
     create = [des_by_name[n] for n in des_by_name if n not in cur_by_name]
     delete = [cur_by_name[n] for n in cur_by_name if n not in des_by_name]
-    edit = [des_by_name[n] for n in des_by_name if n in cur_by_name and des_by_name[n] != cur_by_name[n]]
+    edit = [
+        des_by_name[n] for n in des_by_name if n in cur_by_name and des_by_name[n] != cur_by_name[n]
+    ]
     return {"create": create, "edit": edit, "delete": delete}
 
 
@@ -58,7 +65,8 @@ async def apply(ctx, args):
     deletions = sum(len(changes[s]["delete"]) for s in changes)
     if deletions and not ctx.yes_really:
         raise HandlerError(
-            f"apply would delete {deletions} entities; pass yes_really", code="needs_yes_really")
+            f"apply would delete {deletions} entities; pass yes_really", code="needs_yes_really"
+        )
 
     if ctx.dry_run:
         return plan("guild.apply", guild_id=str(guild.id), changes=changes)

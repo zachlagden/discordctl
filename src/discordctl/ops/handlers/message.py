@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from claude_control.ops import serialize
-from claude_control.ops.lookup import resolve_channel, resolve_guild
-from claude_control.ops.registry import HandlerError, op, plan
+from discordctl.ops import serialize
+from discordctl.ops.lookup import resolve_channel, resolve_guild
+from discordctl.ops.registry import HandlerError, op, plan
 
 
 async def _fetch_message(channel, message_id):
@@ -60,7 +60,9 @@ async def delete(ctx, args):
     guild = resolve_guild(ctx, args)
     channel = resolve_channel(guild, args)
     if ctx.dry_run:
-        return plan("message.delete", channel_id=str(channel.id), message_id=str(args["message_id"]))
+        return plan(
+            "message.delete", channel_id=str(channel.id), message_id=str(args["message_id"])
+        )
     message = await _fetch_message(channel, args["message_id"])
     await message.delete()
     return {"deleted": str(args["message_id"])}

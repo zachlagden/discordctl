@@ -2,14 +2,20 @@ from types import SimpleNamespace
 
 import pytest
 
-from claude_control.ops.lookup import resolve_guild, resolve_role
-from claude_control.ops.registry import BusContext, HandlerError
+from discordctl.ops.lookup import resolve_guild, resolve_role
+from discordctl.ops.registry import BusContext, HandlerError
 
 
 def make_ctx(bot, allowed=frozenset({1}), default=1):
     return BusContext(
-        bot=bot, dry_run=True, confirm=False, yes_really=False, actor="t",
-        write_enabled=True, allowed_guild_ids=allowed, default_guild_id=default,
+        bot=bot,
+        dry_run=True,
+        confirm=False,
+        yes_really=False,
+        actor="t",
+        write_enabled=True,
+        allowed_guild_ids=allowed,
+        default_guild_id=default,
     )
 
 
@@ -44,16 +50,19 @@ def test_resolve_role_by_id():
 
 def test_resolve_category_by_id_ignores_non_category_with_same_id():
     from types import SimpleNamespace
+
     cat = SimpleNamespace(id=300, name="staff")
     other = SimpleNamespace(id=300, name="general")
     guild = SimpleNamespace(categories=[cat], get_channel=lambda cid: other)
-    from claude_control.ops.lookup import resolve_category
+    from discordctl.ops.lookup import resolve_category
+
     assert resolve_category(guild, {"category_id": 300}) is cat
 
 
 def test_resolve_user_id_requires_arg():
-    from claude_control.ops.lookup import resolve_user_id
-    from claude_control.ops.registry import HandlerError
+    from discordctl.ops.lookup import resolve_user_id
+    from discordctl.ops.registry import HandlerError
+
     with pytest.raises(HandlerError):
         resolve_user_id({})
     assert resolve_user_id({"user_id": 5}) == 5
@@ -62,10 +71,12 @@ def test_resolve_user_id_requires_arg():
 async def test_resolve_member_by_id_uses_cache_then_fetch():
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
-    from claude_control.ops.lookup import resolve_member
+    from discordctl.ops.lookup import resolve_member
+
     member = SimpleNamespace(id=100, name="alice")
-    guild = SimpleNamespace(get_member=lambda uid: member if uid == 100 else None,
-                            fetch_member=AsyncMock())
+    guild = SimpleNamespace(
+        get_member=lambda uid: member if uid == 100 else None, fetch_member=AsyncMock()
+    )
     assert await resolve_member(guild, {"user_id": 100}) is member
     guild.fetch_member.assert_not_called()
 
@@ -73,11 +84,14 @@ async def test_resolve_member_by_id_uses_cache_then_fetch():
 async def test_resolve_member_fetch_miss_raises_not_found():
     from types import SimpleNamespace
     import discord
-    from claude_control.ops.lookup import resolve_member
-    from claude_control.ops.registry import HandlerError
+    from discordctl.ops.lookup import resolve_member
+    from discordctl.ops.registry import HandlerError
+
     resp = SimpleNamespace(status=404, reason="Not Found", headers={})
+
     async def boom(uid):
         raise discord.NotFound(resp, "Unknown Member")
+
     guild = SimpleNamespace(get_member=lambda uid: None, fetch_member=boom)
     with pytest.raises(HandlerError) as ei:
         await resolve_member(guild, {"user_id": 999})

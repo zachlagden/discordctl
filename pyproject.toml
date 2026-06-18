@@ -1,7 +1,7 @@
 [project]
-name = "claude-control"
+name = "discordctl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Control a Discord server from the command line — a localhost command bus and dctl CLI for full bot-driven server management."
 readme = "README.md"
 authors = [
     { name = "Zach Lagden", email = "zach@zachlagden.uk" }
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dctl = "claude_control.cli.dctl:main"
+dctl = "discordctl.cli.dctl:main"
 
 [build-system]
 requires = ["uv_build>=0.11.11,<0.12.0"]
@@ -26,6 +26,7 @@ build-backend = "uv_build"
 dev = [
     "pytest>=8,<9",
     "pytest-asyncio>=0.23,<1",
+    "ruff>=0.15.18",
 ]
 
 [tool.pytest.ini_options]
@@ -34,3 +35,7 @@ testpaths = ["tests"]
 filterwarnings = [
     "ignore:'audioop' is deprecated:DeprecationWarning",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
