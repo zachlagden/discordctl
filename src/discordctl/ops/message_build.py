@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 from datetime import timedelta
 from typing import Any
 
@@ -57,12 +58,18 @@ def _build_files(raw: Any) -> list[discord.File]:
     return files
 
 
-def _build_reference(raw: Any) -> discord.MessageReference:
+def _build_reference(raw: Any, default_channel_id: int | None = None) -> discord.MessageReference:
     if not isinstance(raw, dict) or raw.get("message_id") is None:
         raise HandlerError("message_reference requires message_id", code="bad_args")
+    if raw.get("channel_id") is not None:
+        channel_id = int(raw["channel_id"])
+    elif default_channel_id is not None:
+        channel_id = int(default_channel_id)
+    else:
+        channel_id = 0
     return discord.MessageReference(
         message_id=int(raw["message_id"]),
-        channel_id=int(raw["channel_id"]) if raw.get("channel_id") is not None else 0,
+        channel_id=channel_id,
         fail_if_not_exists=bool(raw.get("fail_if_not_exists", True)),
     )
 
@@ -87,7 +94,9 @@ def _build_poll(raw: Any) -> discord.Poll:
     return poll
 
 
-def build_message_kwargs(args: dict[str, Any], *, edit: bool = False) -> dict[str, Any]:
+def build_message_kwargs(
+    args: dict[str, Any], *, edit: bool = False, channel_id: int | None = None
+) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
 
     if args.get("content") is not None:
@@ -124,12 +133,30 @@ def build_message_kwargs(args: dict[str, Any], *, edit: bool = False) -> dict[st
 
     reference = args.get("message_reference") or args.get("reply")
     if reference is not None:
-        kwargs["reference"] = _build_reference(reference)
+        kwargs["reference"] = _build_reference(reference, channel_id)
 
     if args.get("poll") is not None:
         kwargs["poll"] = _build_poll(args["poll"])
 
     return {k: v for k, v in kwargs.items() if k in _SEND_KEYS}
+
+
+def _inject_components(params: Any, components: Any, extra: dict[str, Any] | None = None) -> Any:
+    from discord import http
+
+    if params.multipart:
+        payload_json = next(part for part in params.multipart if part["name"] == "payload_json")
+        payload = json.loads(payload_json["value"])
+        payload["components"] = components
+        if extra:
+            payload.update(extra)
+        payload_json["value"] = http.utils._to_json(payload)
+        return params
+    payload = dict(params.payload or {})
+    payload["components"] = components
+    if extra:
+        payload.update(extra)
+    return params._replace(payload=payload)
 
 
 def _params_with_components(kwargs: dict[str, Any], components: Any) -> Any:
@@ -138,7 +165,9 @@ def _params_with_components(kwargs: dict[str, Any], components: Any) -> Any:
     skip = {"suppress_embeds", "silent", "reference"}
     param_kwargs = {k: v for k, v in kwargs.items() if k not in skip}
     if "reference" in kwargs:
-        param_kwargs["message_reference"] = kwargs["reference"]
+        param_kwargs["message_reference"] = kwargs["reference"].to_message_reference_dict()
+    if "stickers" in kwargs:
+        param_kwargs["stickers"] = [o.id for o in kwargs["stickers"]]
     flags = param_kwargs.get("flags") or discord.MessageFlags()
     if kwargs.get("suppress_embeds"):
         flags.suppress_embeds = True
@@ -147,8 +176,7 @@ def _params_with_components(kwargs: dict[str, Any], components: Any) -> Any:
     if flags.value:
         param_kwargs["flags"] = flags
     params = http.handle_message_parameters(**param_kwargs)
-    params.payload["components"] = components
-    return params
+    return _inject_components(params, components)
 
 
 async def perform_send(ctx: Any, channel: Any, kwargs: dict[str, Any]) -> Any:
@@ -162,12 +190,19 @@ async def perform_send(ctx: Any, channel: Any, kwargs: dict[str, Any]) -> Any:
 
 async def perform_edit(ctx: Any, message: Any, kwargs: dict[str, Any]) -> Any:
     components = kwargs.pop("components", None)
+    flags = kwargs.pop("flags", None)
     if components is None:
-        await message.edit(**kwargs)
+        edit_kwargs = dict(kwargs)
+        if flags is not None and flags.suppress_embeds:
+            edit_kwargs["suppress"] = True
+        await message.edit(**edit_kwargs)
         return message
-    edit_kwargs = {k: v for k, v in kwargs.items() if k != "flags"}
-    params = _params_with_components(edit_kwargs, components)
-    if "flags" in kwargs:
-        params.payload["flags"] = kwargs["flags"].value
+    from discord import http
+
+    extra: dict[str, Any] = {}
+    if flags is not None:
+        extra["flags"] = flags.value
+    params = http.handle_message_parameters(**kwargs)
+    params = _inject_components(params, components, extra)
     await ctx.bot.http.edit_message(message.channel.id, message.id, params=params)
     return message

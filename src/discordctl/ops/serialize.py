@@ -91,7 +91,7 @@ def poll_dict(poll: Any) -> dict[str, Any]:
     for answer in getattr(poll, "answers", []):
         answers.append(
             {
-                "id": getattr(answer, "id", None),
+                "id": _id(getattr(answer, "id", None)),
                 "text": getattr(answer, "text", None),
                 "vote_count": getattr(answer, "vote_count", None),
             }

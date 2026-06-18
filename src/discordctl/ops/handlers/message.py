@@ -38,7 +38,7 @@ async def search(ctx, args):
 async def send(ctx, args):
     guild = resolve_guild(ctx, args)
     channel = resolve_channel(guild, args)
-    kwargs = build_message_kwargs(args)
+    kwargs = build_message_kwargs(args, channel_id=channel.id)
     if ctx.dry_run:
         return plan(
             "message.send",

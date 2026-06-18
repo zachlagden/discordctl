@@ -1,4 +1,5 @@
 import base64
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -9,6 +10,20 @@ from discordctl.ops import message_build
 from discordctl.ops.handlers import message as msg_ops
 from discordctl.ops.handlers import user as user_ops
 from discordctl.ops.registry import BusContext, HandlerError
+
+BUTTON_ROW = [
+    {
+        "type": 1,
+        "components": [{"type": 2, "style": 1, "label": "Click", "custom_id": "go"}],
+    }
+]
+
+
+def _payload_from_params(params):
+    if params.multipart:
+        part = next(p for p in params.multipart if p["name"] == "payload_json")
+        return json.loads(part["value"])
+    return params.payload
 
 
 def test_build_embeds_from_dict():
@@ -187,3 +202,176 @@ async def test_dm_send_live_opens_dm_and_sends():
     await user_ops.dm_send(ctx_for(guild, False, bot=bot), {"user_id": 555, "content": "yo"})
     user.create_dm.assert_awaited_once()
     dm.send.assert_awaited_once()
+
+
+def make_http_guild():
+    guild, channel = make_guild()
+    http = SimpleNamespace(
+        send_message=AsyncMock(return_value={"id": "999"}),
+        edit_message=AsyncMock(return_value={"id": "999"}),
+    )
+    sent = channel.send.return_value
+    channel.fetch_message = AsyncMock(return_value=sent)
+    bot = SimpleNamespace(get_guild=lambda gid: guild, http=http)
+    return guild, channel, bot, http
+
+
+def _assert_serializable_components(payload):
+    serialized = json.dumps(payload)
+    assert "components" in payload
+    assert json.loads(serialized)["components"] == BUTTON_ROW
+
+
+async def test_components_only_sends_via_http_with_components():
+    guild, channel, bot, http = make_http_guild()
+    await msg_ops.send(
+        ctx_for(guild, False, bot=bot),
+        {"channel_id": 200, "content": "hi", "components": BUTTON_ROW},
+    )
+    channel.send.assert_not_called()
+    http.send_message.assert_awaited_once()
+    params = http.send_message.await_args.kwargs["params"]
+    payload = _payload_from_params(params)
+    _assert_serializable_components(payload)
+    assert payload["content"] == "hi"
+
+
+async def test_components_with_files_keeps_components_in_payload_json():
+    guild, channel, bot, http = make_http_guild()
+    raw = base64.b64encode(b"bytes").decode()
+    await msg_ops.send(
+        ctx_for(guild, False, bot=bot),
+        {
+            "channel_id": 200,
+            "content": "hi",
+            "components": BUTTON_ROW,
+            "files": [{"data": raw, "filename": "n.txt"}],
+        },
+    )
+    params = http.send_message.await_args.kwargs["params"]
+    assert params.multipart is not None
+    assert params.files
+    payload = _payload_from_params(params)
+    _assert_serializable_components(payload)
+    json.dumps(payload)
+
+
+async def test_components_with_reference_serializes_reference_dict():
+    guild, channel, bot, http = make_http_guild()
+    await msg_ops.send(
+        ctx_for(guild, False, bot=bot),
+        {
+            "channel_id": 200,
+            "content": "reply",
+            "components": BUTTON_ROW,
+            "message_reference": {"message_id": 42},
+        },
+    )
+    params = http.send_message.await_args.kwargs["params"]
+    payload = _payload_from_params(params)
+    json.dumps(payload)
+    _assert_serializable_components(payload)
+    assert payload["message_reference"]["message_id"] == 42
+    assert payload["message_reference"]["channel_id"] == 200
+
+
+async def test_components_with_stickers_uses_int_sticker_ids():
+    guild, channel, bot, http = make_http_guild()
+    await msg_ops.send(
+        ctx_for(guild, False, bot=bot),
+        {
+            "channel_id": 200,
+            "content": "stk",
+            "components": BUTTON_ROW,
+            "sticker_ids": [123, 456],
+        },
+    )
+    params = http.send_message.await_args.kwargs["params"]
+    payload = _payload_from_params(params)
+    json.dumps(payload)
+    _assert_serializable_components(payload)
+    assert payload["sticker_ids"] == [123, 456]
+
+
+async def test_components_with_suppress_and_silent_sets_flags():
+    guild, channel, bot, http = make_http_guild()
+    await msg_ops.send(
+        ctx_for(guild, False, bot=bot),
+        {
+            "channel_id": 200,
+            "content": "f",
+            "components": BUTTON_ROW,
+            "suppress_embeds": True,
+            "silent": True,
+        },
+    )
+    params = http.send_message.await_args.kwargs["params"]
+    payload = _payload_from_params(params)
+    json.dumps(payload)
+    _assert_serializable_components(payload)
+    flags = discord.MessageFlags._from_value(payload["flags"])
+    assert flags.suppress_embeds is True
+    assert flags.suppress_notifications is True
+
+
+def make_edit_message():
+    return SimpleNamespace(
+        id=999,
+        channel=SimpleNamespace(id=200),
+        author=SimpleNamespace(id=1, name="bot"),
+        content="hi",
+        pinned=False,
+        created_at=None,
+        embeds=[],
+        attachments=[],
+        components=None,
+        poll=None,
+        flags=SimpleNamespace(value=0),
+        edit=AsyncMock(),
+    )
+
+
+async def test_edit_with_components_and_flags_via_http():
+    guild, channel, bot, http = make_http_guild()
+    message = make_edit_message()
+    channel.fetch_message = AsyncMock(return_value=message)
+    await msg_ops.edit(
+        ctx_for(guild, False, bot=bot),
+        {
+            "channel_id": 200,
+            "message_id": 999,
+            "content": "edited",
+            "components": BUTTON_ROW,
+            "flags": {"suppress_embeds": True},
+        },
+    )
+    message.edit.assert_not_called()
+    http.edit_message.assert_awaited_once()
+    params = http.edit_message.await_args.kwargs["params"]
+    payload = _payload_from_params(params)
+    json.dumps(payload)
+    _assert_serializable_components(payload)
+    assert payload["content"] == "edited"
+    flags = discord.MessageFlags._from_value(payload["flags"])
+    assert flags.suppress_embeds is True
+
+
+async def test_edit_with_flags_no_components_maps_to_suppress():
+    guild, channel, bot, http = make_http_guild()
+    message = make_edit_message()
+    channel.fetch_message = AsyncMock(return_value=message)
+    await msg_ops.edit(
+        ctx_for(guild, False, bot=bot),
+        {
+            "channel_id": 200,
+            "message_id": 999,
+            "content": "edited",
+            "flags": {"suppress_embeds": True},
+        },
+    )
+    http.edit_message.assert_not_called()
+    message.edit.assert_awaited_once()
+    edit_kwargs = message.edit.await_args.kwargs
+    assert edit_kwargs["suppress"] is True
+    assert "flags" not in edit_kwargs
+    assert edit_kwargs["content"] == "edited"
