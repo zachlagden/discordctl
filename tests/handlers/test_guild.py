@@ -30,3 +30,27 @@ async def test_edit_dry_run():
     result = await guild_ops.edit(ctx_for(guild, True), {"name": "New"})
     assert result["planned"] is True
     guild.edit.assert_not_called()
+
+
+async def test_audit_log():
+    entry1 = SimpleNamespace(action="role_create", user=None, target=None, reason=None,
+                             created_at="2026-06-18")
+    entry2 = SimpleNamespace(action="role_delete", user=SimpleNamespace(id=5),
+                             target=SimpleNamespace(id=7), reason="cleanup",
+                             created_at="2026-06-18")
+
+    async def gen(entries):
+        for entry in entries:
+            yield entry
+
+    guild = make_guild()
+    guild.audit_logs = lambda limit: gen([entry1, entry2])
+    result = await guild_ops.audit_log(ctx_for(guild, True), {})
+
+    assert len(result) == 2
+    assert result[0]["user_id"] is None
+    assert result[0]["target_id"] is None
+    assert result[1]["user_id"] == "5"
+    assert result[1]["target_id"] == "7"
+    for item in result:
+        assert set(item) == {"action", "user_id", "target_id", "reason", "created_at"}
