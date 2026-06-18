@@ -5,6 +5,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+import discord
 from aiohttp import web
 from pydantic import ValidationError
 
@@ -121,6 +122,17 @@ async def _handle_op(request: web.Request) -> web.Response:
         data = await handler(ctx, payload.args)
     except HandlerError as exc:
         ok, error, status = False, {"message": str(exc), "code": exc.code}, 400
+    except discord.Forbidden as exc:
+        ok, error, status = False, {"message": str(exc), "code": "forbidden"}, 403
+    except discord.NotFound as exc:
+        ok, error, status = False, {"message": str(exc), "code": "not_found"}, 404
+    except discord.HTTPException as exc:
+        retry_after = None
+        if getattr(exc, "response", None) is not None:
+            raw = exc.response.headers.get("Retry-After")
+            retry_after = float(raw) if raw else None
+        status = exc.status if 400 <= exc.status < 600 else 502
+        ok, error = False, {"message": str(exc), "code": "http_error", "retry_after": retry_after}
     except Exception:
         log.exception("unhandled error in op %s", payload.op)
         ok, error, status = False, "internal server error", 500

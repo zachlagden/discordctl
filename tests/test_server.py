@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import discord
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -112,4 +113,51 @@ async def test_ops_requires_auth():
     await client.start_server()
     resp = await client.get("/v1/ops")
     assert resp.status == 401
+    await client.close()
+
+
+def _resp(status, headers=None):
+    return SimpleNamespace(status=status, reason="x", headers=headers or {})
+
+
+async def test_forbidden_maps_403():
+    reg = Registry()
+    async def h(ctx, args):
+        raise discord.Forbidden(_resp(403), "Missing Permissions")
+    reg.register("x.forbidden", h)
+    client = await _client(reg)
+    await client.start_server()
+    resp = await client.post("/v1/op", json={"op": "x.forbidden"},
+                             headers={"Authorization": "Bearer secret"})
+    assert resp.status == 403
+    body = await resp.json()
+    assert body["error"]["code"] == "forbidden"
+    await client.close()
+
+
+async def test_notfound_maps_404():
+    reg = Registry()
+    async def h(ctx, args):
+        raise discord.NotFound(_resp(404), "Unknown")
+    reg.register("x.missing", h)
+    client = await _client(reg)
+    await client.start_server()
+    resp = await client.post("/v1/op", json={"op": "x.missing"},
+                             headers={"Authorization": "Bearer secret"})
+    assert resp.status == 404
+    await client.close()
+
+
+async def test_httpexception_maps_status_and_retry_after():
+    reg = Registry()
+    async def h(ctx, args):
+        raise discord.HTTPException(_resp(429, {"Retry-After": "5"}), "rate limited")
+    reg.register("x.ratelimited", h)
+    client = await _client(reg)
+    await client.start_server()
+    resp = await client.post("/v1/op", json={"op": "x.ratelimited"},
+                             headers={"Authorization": "Bearer secret"})
+    assert resp.status == 429
+    body = await resp.json()
+    assert body["error"]["retry_after"] == 5.0
     await client.close()
