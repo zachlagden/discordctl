@@ -140,6 +140,20 @@ def emoji_dict(emoji: Any) -> dict[str, Any]:
     return {"id": _id(emoji.id), "name": emoji.name, "animated": emoji.animated}
 
 
+def sticker_dict(s: Any) -> dict[str, Any]:
+    emoji = getattr(s, "emoji", None)
+    fmt = getattr(s, "format", None)
+    return {
+        "id": _id(getattr(s, "id", None)),
+        "name": getattr(s, "name", None),
+        "description": getattr(s, "description", None),
+        "emoji": str(emoji) if emoji is not None else None,
+        "format": str(getattr(fmt, "name", fmt)) if fmt is not None else None,
+        "available": getattr(s, "available", None),
+        "guild_id": _id(getattr(s, "guild_id", None)),
+    }
+
+
 def invite_dict(invite: Any) -> dict[str, Any]:
     return {
         "code": invite.code,

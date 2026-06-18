@@ -69,6 +69,9 @@ EXPECTED_MUTATING = {
     "automod.delete",
     "emoji.create",
     "emoji.delete",
+    "sticker.create",
+    "sticker.edit",
+    "sticker.delete",
     "invite.create",
     "invite.delete",
     "webhook.create",
@@ -119,6 +122,10 @@ EXPECTED_READ = {
     "automod.list",
     "automod.info",
     "emoji.list",
+    "sticker.list",
+    "sticker.info",
+    "sticker.get",
+    "sticker.packs",
     "invite.list",
     "webhook.list",
 }
@@ -126,7 +133,7 @@ EXPECTED_READ = {
 
 def test_all_handlers_load():
     load_all_handlers()
-    assert len(REGISTRY.ops()) == 117
+    assert len(REGISTRY.ops()) == 124
 
 
 def test_mutating_flags_match_plan():
