@@ -96,6 +96,19 @@ async def test_edit_permissions_and_emoji_live():
     assert kwargs["display_icon"] == "⭐"
 
 
+async def test_edit_position_forwarded_to_role_edit():
+    guild, role = make_guild()
+    await role_ops.edit(ctx_for(guild, False), {"role_id": 10, "position": 3})
+    kwargs = role.edit.await_args.kwargs
+    assert kwargs["position"] == 3
+
+
+async def test_create_ignores_position():
+    guild, role = make_guild()
+    await role_ops.create(ctx_for(guild, False), {"name": "c", "position": 5})
+    assert "position" not in guild.create_role.await_args.kwargs
+
+
 async def test_edit_gradient_dry_run_does_not_call():
     guild, role = make_guild()
     result = await role_ops.edit(

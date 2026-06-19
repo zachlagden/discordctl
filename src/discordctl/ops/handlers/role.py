@@ -91,6 +91,8 @@ async def edit(ctx, args):
     if "name" in args:
         fields["name"] = args["name"]
     fields.update(_role_field_kwargs(args))
+    if args.get("position") is not None:
+        fields["position"] = int(args["position"])
     if ctx.dry_run:
         return plan("role.edit", role_id=str(role.id), fields=list(fields))
     await role.edit(reason=args.get("reason"), **fields)

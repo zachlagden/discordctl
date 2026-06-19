@@ -86,6 +86,66 @@ async def test_edit_live_converts_fields():
     assert kwargs["premium_progress_bar_enabled"] is True
 
 
+async def test_edit_community_live_forwards_flag():
+    guild = make_guild()
+    await guild_ops.edit(
+        ctx_for(guild, False),
+        {
+            "community": True,
+            "rules_channel": "200",
+            "public_updates_channel": "200",
+        },
+    )
+    guild.edit.assert_awaited_once()
+    kwargs = guild.edit.await_args.kwargs
+    assert kwargs["community"] is True
+    assert kwargs["rules_channel"].id == 200
+    assert kwargs["public_updates_channel"].id == 200
+
+
+async def test_edit_community_dry_run_does_not_call_edit():
+    guild = make_guild()
+    result = await guild_ops.edit(ctx_for(guild, True), {"community": True})
+    assert result["planned"] is True
+    assert "community" in result["fields"]
+    guild.edit.assert_not_called()
+
+
+async def test_edit_full_surface_forwards_channel_enum_datetime():
+    guild = make_guild()
+    await guild_ops.edit(
+        ctx_for(guild, False),
+        {
+            "discoverable": True,
+            "invites_disabled": False,
+            "widget_enabled": True,
+            "widget_channel_id": "200",
+            "mfa_level": "require_2fa",
+            "afk_channel": "200",
+            "invites_disabled_until": "2026-07-01T00:00:00+00:00",
+            "unknown_setting": "ignored",
+        },
+    )
+    guild.edit.assert_awaited_once()
+    kwargs = guild.edit.await_args.kwargs
+    assert kwargs["discoverable"] is True
+    assert kwargs["invites_disabled"] is False
+    assert kwargs["widget_enabled"] is True
+    assert kwargs["widget_channel"].id == 200
+    assert kwargs["mfa_level"].name == "require_2fa"
+    assert kwargs["afk_channel"].id == 200
+    assert kwargs["invites_disabled_until"].year == 2026
+    assert "unknown_setting" not in kwargs
+
+
+async def test_edit_image_accepts_b64_suffix():
+    guild = make_guild()
+    banner = base64.b64encode(b"banner").decode()
+    await guild_ops.edit(ctx_for(guild, False), {"banner_b64": banner})
+    kwargs = guild.edit.await_args.kwargs
+    assert kwargs["banner"] == b"banner"
+
+
 async def test_incident_actions_dry_run():
     guild = make_guild()
     result = await guild_ops.incident_actions_set(

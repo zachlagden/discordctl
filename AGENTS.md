@@ -188,7 +188,7 @@ See **Bot presence** below for the ephemeral-state caveat.
 | `guild.audit_log` | R | `limit?` | recent audit-log entries |
 | `guild.vanity_url` | R | — | vanity invite **[new]** |
 | `guild.voice_regions` | R | — | available regions **[new]** |
-| `guild.edit` | M | any of `name`/`description`/`icon`/`banner`/`splash`/`vanity_code`/`afk_channel`/`afk_timeout`/`system_channel`/`rules_channel`/`public_updates_channel`/`safety_alerts_channel`/`verification_level`/`default_message_notifications`/`explicit_content_filter`/`preferred_locale`/`premium_progress_bar_enabled`/`system_channel_flags` | full settings **[new]** |
+| `guild.edit` | M | any of `name`/`description`/`icon`/`banner`/`splash`/`discovery_splash` (each also accepts `<field>_b64`)/`vanity_code`/`afk_channel`/`afk_timeout`/`system_channel`/`rules_channel`/`public_updates_channel`/`safety_alerts_channel`/`widget_channel` (channel fields also accept `<field>_id`)/`community`/`discoverable`/`invites_disabled`/`widget_enabled`/`raid_alerts_disabled`/`premium_progress_bar_enabled`/`verification_level`/`default_notifications`(`default_message_notifications`)/`explicit_content_filter`/`mfa_level`/`preferred_locale`/`system_channel_flags`/`invites_disabled_until`/`dms_disabled_until` | full Modify-Guild surface incl. `community` toggle (excludes `owner`); enabling `community` needs `rules_channel`+`public_updates_channel` **[new]** |
 | `guild.prune_count` | R | `days?`, `role_ids?` | dry estimate **[new]** |
 | `guild.prune` | M | `days?`, `role_ids?`, `compute_prune_count?` | remove inactive members **[new]** |
 | `guild.onboarding_get` | R | — | **[new]** |
@@ -237,7 +237,7 @@ See **Bot presence** below for the ephemeral-state caveat.
 | `role.info` | R | `role_id\|role_name` | |
 | `role.member_counts` | R | — | members per role (cache-based) **[new]** |
 | `role.create` | M | `name`, `colour?`, `permissions?`, `hoist?`, `mentionable?`, `icon?`, `unicode_emoji?`, `colors?` | `colors` = gradient holographic colours **[new]**; `icon` = role icon |
-| `role.edit` | M | `role_id\|role_name`, any of `name`/`colour`/`permissions`/`hoist`/`mentionable`/`icon`/`unicode_emoji`/`colors` | gradient colours + icon **[new]** |
+| `role.edit` | M | `role_id\|role_name`, any of `name`/`colour`/`permissions`/`hoist`/`mentionable`/`icon`/`unicode_emoji`/`colors`/`position` | gradient colours + icon + position **[new]** |
 | `role.move` | M | `role_id\|role_name`, `position` | reorder (affects hierarchy) |
 | `role.clone` | M | `role_id\|role_name`, `name?` | copy perms/colour/flags |
 | `role.permissions_set` | M | `role_id\|role_name`, `permissions` | replace permission bitfield |

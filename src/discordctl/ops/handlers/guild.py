@@ -60,42 +60,76 @@ def _parse_dt(value):
     return datetime.datetime.fromisoformat(value)
 
 
+_GUILD_EDIT_BOOLS = (
+    "community",
+    "discoverable",
+    "invites_disabled",
+    "widget_enabled",
+    "raid_alerts_disabled",
+    "premium_progress_bar_enabled",
+)
+
+_GUILD_EDIT_STRINGS = ("name", "description", "preferred_locale", "vanity_code")
+
+_GUILD_EDIT_IMAGES = ("icon", "banner", "splash", "discovery_splash")
+
+_GUILD_EDIT_CHANNELS = (
+    "afk_channel",
+    "system_channel",
+    "rules_channel",
+    "public_updates_channel",
+    "safety_alerts_channel",
+    "widget_channel",
+)
+
+_GUILD_EDIT_ENUMS = {
+    "verification_level": discord.VerificationLevel,
+    "default_notifications": discord.NotificationLevel,
+    "explicit_content_filter": discord.ContentFilter,
+    "mfa_level": discord.MFALevel,
+}
+
+_GUILD_EDIT_DATETIMES = ("invites_disabled_until", "dms_disabled_until")
+
+
+def _enum_value(enum_cls, value):
+    if isinstance(value, str):
+        return enum_cls[value]
+    return enum_cls(int(value))
+
+
 def _build_edit_fields(guild, args):
     fields = {}
-    for key in ("name", "description", "preferred_locale", "vanity_code"):
+    for key in _GUILD_EDIT_STRINGS:
         if key in args:
             fields[key] = args[key]
-    for key in ("icon", "banner", "splash", "discovery_splash"):
+    for key in _GUILD_EDIT_IMAGES:
         if key in args:
             fields[key] = _decode_image(args[key])
-    for key in ("afk_timeout",):
-        if key in args:
-            fields[key] = int(args[key])
-    for key in ("premium_progress_bar_enabled",):
+        elif f"{key}_b64" in args:
+            fields[key] = _decode_image(args[f"{key}_b64"])
+    if "afk_timeout" in args:
+        fields["afk_timeout"] = int(args["afk_timeout"])
+    for key in _GUILD_EDIT_BOOLS:
         if key in args:
             fields[key] = bool(args[key])
-    if "afk_channel" in args:
-        fields["afk_channel"] = _channel_or_none(guild, args["afk_channel"])
-    for src_key, dst_key in (
-        ("system_channel", "system_channel"),
-        ("rules_channel", "rules_channel"),
-        ("public_updates_channel", "public_updates_channel"),
-        ("safety_alerts_channel", "safety_alerts_channel"),
-    ):
-        if src_key in args:
-            fields[dst_key] = _channel_or_none(guild, args[src_key])
-    if "verification_level" in args:
-        fields["verification_level"] = discord.VerificationLevel[args["verification_level"]]
-    if "default_notifications" in args:
-        fields["default_notifications"] = discord.NotificationLevel[args["default_notifications"]]
+    for key in _GUILD_EDIT_CHANNELS:
+        if key in args:
+            fields[key] = _channel_or_none(guild, args[key])
+        elif f"{key}_id" in args:
+            fields[key] = _channel_or_none(guild, args[f"{key}_id"])
+    for key, enum_cls in _GUILD_EDIT_ENUMS.items():
+        if key in args:
+            fields[key] = _enum_value(enum_cls, args[key])
     if "default_message_notifications" in args:
-        fields["default_notifications"] = discord.NotificationLevel[
-            args["default_message_notifications"]
-        ]
-    if "explicit_content_filter" in args:
-        fields["explicit_content_filter"] = discord.ContentFilter[args["explicit_content_filter"]]
+        fields["default_notifications"] = _enum_value(
+            discord.NotificationLevel, args["default_message_notifications"]
+        )
     if "system_channel_flags" in args:
         fields["system_channel_flags"] = discord.SystemChannelFlags(**args["system_channel_flags"])
+    for key in _GUILD_EDIT_DATETIMES:
+        if key in args:
+            fields[key] = _parse_dt(args[key])
     return fields
 
 
